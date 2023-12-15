@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools-scm[toml]>=7.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gh-project-metrics"
+dynamic = ["version"]
+description = ""
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+keywords = []
+authors = [{ name = "Adrian Rumpold", email = "a.rumpold@gmail.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "pandas",
+  "matplotlib",
+  "PyGithub",
+  "google-cloud-bigquery",
+  "db-dtypes",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=0.10.0",
+  "pre-commit>=3.3.3",
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "ruff",
+]
+
+[project.urls]
+Documentation = "https://github.com/AdrianoKF/gh-project-metrics#readme"
+Issues = "https://github.com/AdrianoKF/gh-project-metrics/issues"
+Source = "https://github.com/AdrianoKF/gh-project-metrics"
+
+# Automatically determine version number from Git tags
+[tool.setuptools_scm]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+# explicitly set src folder for isort to understand first-party imports correctly.
+src = ["src"]
+line-length = 100
+# Enable pycodestyle errors & warnings (`E`, `W`), Pyflakes (`F`), and isort (`I`) by default.
+select = ["E", "F", "I", "W"]
+ignore = [
+  # Line too long
+  "E501",
+  # Allow capitalized variable names
+  "F841",
+]
+
+[tool.coverage.run]
+source_pkgs = ["gh_project_metrics", "tests"]
+branch = true
+parallel = true
+omit = ["src/gh_project_metrics/__about__.py"]
+
+[tool.coverage.paths]
+gh_project_metrics = [
+  "src/gh_project_metrics",
+  "*/gh-project-metrics/src/gh_project_metrics",
+]
+tests = ["tests", "*/gh-project-metrics/tests"]
+
+[tool.coverage.report]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]

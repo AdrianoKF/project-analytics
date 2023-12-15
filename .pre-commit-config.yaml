@@ -1,0 +1,42 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      # See https://github.com/pre-commit/mirrors-mypy/blob/main/.pre-commit-hooks.yaml
+     - id: mypy
+       types_or: [ python, pyi ]
+       args: [--ignore-missing-imports, --scripts-are-modules]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.7
+    hooks:
+      - id: ruff
+        args: [ --fix, --exit-non-zero-on-fix ]
+      - id: ruff-format
+  - repo: https://github.com/jazzband/pip-tools
+    rev: 7.3.0
+    hooks:
+      - id: pip-compile
+        name: pip-compile requirements.txt
+        args:
+          - --no-annotate
+          - --strip-extras
+          - --output-file=requirements.txt
+          - pyproject.toml
+        files: ^(pyproject\.toml|requirements\.txt)$
+      - id: pip-compile
+        name: pip-compile requirements-dev.txt
+        args:
+          - --no-annotate
+          - --extra=dev
+          - --output-file=requirements-dev.txt
+          - pyproject.toml
+        files: ^(pyproject\.toml|requirements-dev\.txt)$
