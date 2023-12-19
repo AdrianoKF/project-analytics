@@ -38,5 +38,6 @@ jobs:
           git switch data
           today=$(date +"%F")
           git add data/
-          git commit -m "Add raw data for $today"
+          git add plots/
+          git commit -m "Add raw data and plots for $today"
           git push origin data
