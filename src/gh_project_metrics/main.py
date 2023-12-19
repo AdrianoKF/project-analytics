@@ -63,6 +63,7 @@ def github_metrics(datadir: Path, plotdir: Path | None = None) -> None:
     pp(metrics.history())
 
     metrics.dump_raw_data(datadir)
+    metrics.dump_raw_data(datadir.parent / "combined")
 
     if not plotdir:
         return
@@ -117,6 +118,7 @@ def pypi_metrics(datadir: Path, plotdir: Path | None = None) -> None:
     pp(downloads.groupby("date")["num_downloads"].sum())
 
     metrics.dump_raw_data(datadir)
+    metrics.dump_raw_data(datadir.parent / "combined")
 
     if not plotdir:
         return

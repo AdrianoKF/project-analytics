@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 from github.Repository import Repository
 
+from gh_project_metrics.util import combine_csv
+
 
 @dataclass(slots=True, frozen=True)
 class MetricsConfig:
@@ -31,9 +33,9 @@ class GithubMetrics:
             raise ValueError(f"not a directory: {outdir!r}")
 
         self.referrers().to_csv(outdir / "referrers.csv", index=True)
-        self.views().to_csv(outdir / "views.csv", index=True)
-        self.stars().to_csv(outdir / "stars.csv", index=True)
-        self.clones().to_csv(outdir / "clones.csv", index=True)
+        combine_csv(self.views(), outdir / "views.csv")
+        combine_csv(self.stars(), outdir / "stars.csv")
+        combine_csv(self.clones(), outdir / "clones.csv")
 
     @cache
     def stars(self) -> pd.DataFrame:

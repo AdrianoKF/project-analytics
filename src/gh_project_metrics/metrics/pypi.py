@@ -4,13 +4,19 @@ from pathlib import Path
 
 import pandas as pd
 
+from gh_project_metrics.util import combine_csv
+
 
 class PyPIMetrics:
     def dump_raw_data(self, outdir: Path) -> None:
         if not outdir.is_dir():
             raise ValueError(f"not a directory: {outdir!r}")
 
-        self.downloads().to_csv(outdir / "pypi_downloads.csv", index=True)
+        combine_csv(
+            self.downloads(),
+            outdir / "pypi_downloads.csv",
+            sort_kwargs={"level": ["version", "date"], "ascending": [False, True]},
+        )
 
     @cache
     def downloads(self) -> pd.DataFrame:
