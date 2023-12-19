@@ -23,7 +23,9 @@ dependencies = [
   "matplotlib",
   "PyGithub",
   "google-cloud-bigquery",
-  "db-dtypes",
+  "db-dtypes",             # BigQuery to Pandas
+  "plotly",
+  "kaleido",               # Plotly image export
 ]
 
 [project.optional-dependencies]

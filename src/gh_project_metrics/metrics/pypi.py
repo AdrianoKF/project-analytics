@@ -18,6 +18,7 @@ class PyPIMetrics:
         df = pd.read_csv(
             f"https://storage.googleapis.com/pypi-download-stats/{today}/000000000000.csv",
             delimiter=";",
+            index_col=["version", "date"],
+            parse_dates=True,
         )
-        df.set_index(["version", "date"], inplace=True)
         return df

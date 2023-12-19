@@ -103,3 +103,4 @@ cython_debug/
 .direnv
 
 data/
+plots/
