@@ -8,23 +8,27 @@ def combine(
     df2: pd.DataFrame,
     sort_kwargs: dict | None = None,
 ) -> pd.DataFrame:
-    if isinstance(df1.index, pd.MultiIndex):
+    if type(df1.index) is not type(df2.index):  # noqa: E721
+        raise ValueError(
+            f"DataFrames must have equal base types. {type(df1.index)!r} != {type(df2.index)!r}"
+        )
+    if isinstance(df1.index, pd.MultiIndex) and isinstance(df2.index, pd.MultiIndex):
         if df1.index.names != df2.index.names:
             raise ValueError(
-                f"DataFrames must have equally named indexes. {df1.index.names!r} != {df2.index.names}"
+                f"DataFrames must have equally named indexes. {df1.index.names!r} != {df2.index.names!r}"
             )
-        if df1.index.dtypes != df2.index.dtypes:
+        if any(df1.index.dtypes != df2.index.dtypes):
             raise ValueError(
-                f"DataFrames must have equally typed indexes. {df1.index.dtypes!r} != {df2.index.dtypes}"
+                f"DataFrames must have equally typed indexes. {df1.index.dtypes!r} != {df2.index.dtypes!r}"
             )
     else:
         if df1.index.name != df2.index.name:
             raise ValueError(
-                f"DataFrames must have equally named indexes. {df1.index.name!r} != {df2.index.name}"
+                f"DataFrames must have equally named indexes. {df1.index.name!r} != {df2.index.name!r}"
             )
         if df1.index.dtype != df2.index.dtype:
             raise ValueError(
-                f"DataFrames must have equally typed indexes. {df1.index.dtype!r} != {df2.index.dtype}"
+                f"DataFrames must have equally typed indexes. {df1.index.dtype!r} != {df2.index.dtype!r}"
             )
     if any(df1.columns != df2.columns):
         raise ValueError(

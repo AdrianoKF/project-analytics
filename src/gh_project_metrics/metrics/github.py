@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import timezone
 from functools import cache
 from pathlib import Path
 
@@ -41,7 +42,10 @@ class GithubMetrics:
     def stars(self) -> pd.DataFrame:
         df = pd.DataFrame(
             [
-                {"date": sg.starred_at, "user": sg.user.login}
+                {
+                    "date": sg.starred_at.astimezone(timezone.utc),
+                    "user": sg.user.login,
+                }
                 for sg in self.repo.get_stargazers_with_dates()
             ],
         )
@@ -54,10 +58,13 @@ class GithubMetrics:
     def views(self) -> pd.DataFrame:
         per = self._github_api_period
         view_traffic = self.repo.get_views_traffic(per)
+        if not view_traffic:
+            return pd.DataFrame()
+
         df = pd.DataFrame(
             [
                 {
-                    "date": view.timestamp,
+                    "date": view.timestamp.astimezone(timezone.utc),
                     "count": view.count,
                     "unique": view.uniques,
                 }
@@ -70,10 +77,13 @@ class GithubMetrics:
     def clones(self) -> pd.DataFrame:
         per = self._github_api_period
         clone_traffic = self.repo.get_clones_traffic(per)
+        if not clone_traffic:
+            return pd.DataFrame()
+
         df = pd.DataFrame(
             [
                 {
-                    "date": view.timestamp,
+                    "date": view.timestamp.astimezone(timezone.utc),
                     "count": view.count,
                     "unique": view.uniques,
                 }
@@ -84,7 +94,7 @@ class GithubMetrics:
 
     @cache
     def referrers(self):
-        df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers()])
+        df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])
         return df.set_index("referrer")
 
     def history(self) -> pd.DataFrame:
