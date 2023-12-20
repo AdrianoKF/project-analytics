@@ -23,7 +23,6 @@ class PyPIMetrics:
         today = datetime.date.today().strftime("%F")
         df = pd.read_csv(
             f"https://storage.googleapis.com/pypi-download-stats/{today}/000000000000.csv",
-            delimiter=";",
             index_col=["version", "date"],
             parse_dates=True,
         )

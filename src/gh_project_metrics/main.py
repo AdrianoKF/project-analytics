@@ -8,6 +8,7 @@ import plotly.express as px
 from github import Github
 from plotly.graph_objects import Figure
 
+from gh_project_metrics.cli import args
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
 from gh_project_metrics.metrics.pypi import PyPIMetrics
 
@@ -146,7 +147,12 @@ def pypi_metrics(
 
 
 def run():
-    today = datetime.date.today().strftime("%F")
+    logging.basicConfig(level=logging.INFO)
+
+    # Round-trip conversion to validate input
+    today = datetime.datetime.strptime(args.date, "%Y-%m-%d").strftime("%Y-%m-%d")
+    logging.info("Running for %s", today)
+
     datadir = Path.cwd() / "data" / today
     datadir.mkdir(exist_ok=True, parents=True)
 
