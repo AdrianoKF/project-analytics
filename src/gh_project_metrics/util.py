@@ -9,13 +9,27 @@ def combine(
     sort_kwargs: dict | None = None,
 ) -> pd.DataFrame:
     if isinstance(df1.index, pd.MultiIndex):
-        if not (df1.index.names == df2.index.names and all(df1.index.dtypes == df2.index.dtypes)):
-            raise ValueError("DataFrames must have equally named and typed indexes")
+        if df1.index.names != df2.index.names:
+            raise ValueError(
+                f"DataFrames must have equally named indexes. {df1.index.names!r} != {df2.index.names}"
+            )
+        if df1.index.dtypes != df2.index.dtypes:
+            raise ValueError(
+                f"DataFrames must have equally typed indexes. {df1.index.dtypes!r} != {df2.index.dtypes}"
+            )
     else:
-        if not (df1.index.name == df2.index.name and df1.index.dtype == df2.index.dtype):
-            raise ValueError("DataFrames must have equally named and typed indexes")
+        if df1.index.name != df2.index.name:
+            raise ValueError(
+                f"DataFrames must have equally named indexes. {df1.index.name!r} != {df2.index.name}"
+            )
+        if df1.index.dtype != df2.index.dtype:
+            raise ValueError(
+                f"DataFrames must have equally typed indexes. {df1.index.dtype!r} != {df2.index.dtype}"
+            )
     if any(df1.columns != df2.columns):
-        raise ValueError("DataFrames must matching columns")
+        raise ValueError(
+            f"DataFrames must have matching columns. {df1.columns!r} != {df2.columns!r}"
+        )
 
     return pd.concat([df2, df1.loc[df1.index.difference(df2.index)]]).sort_index(
         **(sort_kwargs or {})
