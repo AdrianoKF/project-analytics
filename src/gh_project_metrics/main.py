@@ -68,7 +68,7 @@ def github_metrics(
 
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
-        metrics.dump_raw_data(datadir.parent / "combined")
+        metrics.dump_raw_data(combined_data_dir)
 
     if not plotdir:
         return
@@ -128,7 +128,7 @@ def pypi_metrics(
 
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
-        metrics.dump_raw_data(datadir.parent / "combined")
+        metrics.dump_raw_data(combined_data_dir)
 
     if not plotdir:
         return
