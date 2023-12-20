@@ -1,10 +1,11 @@
 referrer,count,uniques
-github.com,244,14
-lakefs-spec.org,98,8
+github.com,238,14
+lakefs-spec.org,101,9
 Google,70,9
-filesystem-spec.readthedocs.io,3,3
+pypi.org,32,1
+Bing,7,3
 randomgithubrepo.site,3,1
-Bing,2,2
+filesystem-spec.readthedocs.io,2,2
 lakefs.io,2,1
 linkedin.com,2,1
 com.google.android.gm,1,1
