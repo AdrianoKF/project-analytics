@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 from pathlib import Path
@@ -148,7 +147,7 @@ def run():
     logging.basicConfig(level=logging.INFO)
 
     # Round-trip conversion to validate input
-    today = datetime.datetime.strptime(args.date, "%Y-%m-%d").strftime("%Y-%m-%d")
+    today = args.date.strftime("%Y-%m-%d")
     logging.info("Running for %s", today)
 
     datadir = Path.cwd() / "data" / today
