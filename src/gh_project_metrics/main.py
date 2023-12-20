@@ -12,8 +12,6 @@ from gh_project_metrics.cli import args
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
 from gh_project_metrics.metrics.pypi import PyPIMetrics
 
-logging.basicConfig(level=logging.INFO)
-
 
 def _header(title: str) -> str:
     return f"---------- {title:<20} ----------"
@@ -162,8 +160,17 @@ def run():
     plotdir = Path.cwd() / "plots" / today
     plotdir.mkdir(exist_ok=True, parents=True)
 
-    github_metrics(datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
-    pypi_metrics(datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
+    logging.info("Data output dir: %s", datadir)
+    logging.info("Combined output dir: %s", combined_data_dir)
+    logging.info("Plots output dir: %s", plotdir)
+
+    if args.github:
+        logging.info("Collecting GitHub metrics")
+        github_metrics(datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
+
+    if args.pypi:
+        logging.info("Collecting PyPI metrics")
+        pypi_metrics(datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
 
 
 if __name__ == "__main__":
