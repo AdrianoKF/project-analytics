@@ -5,34 +5,15 @@ from pprint import pp
 
 import plotly.express as px
 from github import Github
-from plotly.graph_objects import Figure
 
 from gh_project_metrics.cli import args
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
 from gh_project_metrics.metrics.pypi import PyPIMetrics
+from gh_project_metrics.plotting import PLOT_TEMPLATE, add_weekends, format_plot, write_plot
 
 
 def _header(title: str) -> str:
     return f"---------- {title:<20} ----------"
-
-
-def _plot_path(name: str, plotdir: Path) -> Path:
-    return plotdir / f"{name}.png"
-
-
-def _write_plot(fig: Figure, plotdir: Path, name: str) -> Path:
-    image_path = _plot_path(name, plotdir)
-    image = fig.to_image(
-        format=image_path.suffix.strip("."),
-        width=1200,
-        height=800,
-    )
-    image_path.write_bytes(image)
-
-    plot_json = fig.to_json()
-    image_path.with_suffix(".json").write_text(plot_json, encoding="utf8")
-
-    return image_path
 
 
 def github_metrics(
@@ -78,9 +59,11 @@ def github_metrics(
         y="stars",
         markers=True,
         title="GitHub Stars",
+        template=PLOT_TEMPLATE,
     )
-    fig.update_layout(yaxis_title=None, xaxis_title=None)
-    _write_plot(fig, plotdir, "stars")
+    add_weekends(fig, start=stars.index.min(), end=stars.index.max())
+    format_plot(fig)
+    write_plot(fig, plotdir, "stars")
 
     # Plot Clones
     fig = px.line(
@@ -93,9 +76,11 @@ def github_metrics(
         color="variable",
         markers=True,
         title="GitHub Clones",
+        template=PLOT_TEMPLATE,
     )
-    fig.update_layout(yaxis_title=None, xaxis_title=None)
-    _write_plot(fig, plotdir, "clones")
+    add_weekends(fig, start=clones.index.min(), end=clones.index.max())
+    format_plot(fig)
+    write_plot(fig, plotdir, "clones")
 
     # Plot Views
     fig = px.line(
@@ -108,9 +93,11 @@ def github_metrics(
         color="variable",
         markers=True,
         title="GitHub Views",
+        template=PLOT_TEMPLATE,
     )
-    fig.update_layout(yaxis_title=None, xaxis_title=None)
-    _write_plot(fig, plotdir, "views")
+    add_weekends(fig, start=views.index.min(), end=views.index.max())
+    format_plot(fig)
+    write_plot(fig, plotdir, "views")
 
 
 def pypi_metrics(
@@ -121,9 +108,6 @@ def pypi_metrics(
     metrics = PyPIMetrics()
     downloads = metrics.downloads()
 
-    pp(downloads)
-    pp(downloads.groupby("date")["num_downloads"].sum())
-
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
         metrics.dump_raw_data(combined_data_dir)
@@ -131,16 +115,26 @@ def pypi_metrics(
     if not plotdir:
         return
 
+    plot_df = downloads.reset_index()
     fig = px.line(
-        downloads.reset_index(),
+        plot_df,
         x="date",
         y="num_downloads",
         color="version",
         markers=True,
         title="PyPI Downloads",
+        template=PLOT_TEMPLATE,
     )
-    fig.update_layout(yaxis_title=None, xaxis_title=None)
-    _write_plot(fig, plotdir, "pypi_downloads")
+
+    # Overlay rectangles for weekends
+    add_weekends(
+        fig,
+        start=downloads.index.levels[1].min(),
+        end=downloads.index.levels[1].max(),
+    )
+
+    format_plot(fig)
+    write_plot(fig, plotdir, "pypi_downloads")
 
 
 def run():
