@@ -38,6 +38,9 @@ dev = [
   "ruff",
 ]
 
+[project.scripts]
+project-analytics = "gh_project_metrics.main:run"
+
 [project.urls]
 Documentation = "https://github.com/AdrianoKF/gh-project-metrics#readme"
 Issues = "https://github.com/AdrianoKF/gh-project-metrics/issues"

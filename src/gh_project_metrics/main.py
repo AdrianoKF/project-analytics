@@ -17,12 +17,13 @@ def _header(title: str) -> str:
 
 
 def github_metrics(
+    repo_name: str,
     datadir: Path,
     combined_data_dir: Path | None = None,
     plotdir: Path | None = None,
 ) -> None:
     gh = Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN"))
-    repo = gh.get_repo("aai-institute/lakefs-spec")
+    repo = gh.get_repo(repo_name)
     config = MetricsConfig(aggregate_time="D")
 
     metrics = GithubMetrics(repo, config)
@@ -101,11 +102,12 @@ def github_metrics(
 
 
 def pypi_metrics(
+    package_name: str,
     datadir: Path,
     combined_data_dir: Path | None = None,
     plotdir: Path | None = None,
 ) -> None:
-    metrics = PyPIMetrics()
+    metrics = PyPIMetrics(package_name=package_name)
     downloads = metrics.downloads()
 
     metrics.dump_raw_data(datadir)
@@ -144,13 +146,17 @@ def run():
     today = args.date.strftime("%Y-%m-%d")
     logging.info("Running for %s", today)
 
-    datadir = Path.cwd() / "data" / today
+    github_name = args.name
+    project_name = github_name.split("/")[-1]
+    pypi_name = project_name  # XXX: Assumes package name matches project name
+
+    datadir = Path.cwd() / "data" / project_name / today
     datadir.mkdir(exist_ok=True, parents=True)
 
-    combined_data_dir = Path.cwd() / "data" / "combined"
+    combined_data_dir = Path.cwd() / "data" / project_name / "combined"
     combined_data_dir.mkdir(exist_ok=True, parents=True)
 
-    plotdir = Path.cwd() / "plots" / today
+    plotdir = Path.cwd() / "plots" / project_name / today
     plotdir.mkdir(exist_ok=True, parents=True)
 
     logging.info("Data output dir: %s", datadir)
@@ -159,11 +165,11 @@ def run():
 
     if args.github:
         logging.info("Collecting GitHub metrics")
-        github_metrics(datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
+        github_metrics(github_name, datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
 
     if args.pypi:
         logging.info("Collecting PyPI metrics")
-        pypi_metrics(datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
+        pypi_metrics(pypi_name, datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
 
 
 if __name__ == "__main__":

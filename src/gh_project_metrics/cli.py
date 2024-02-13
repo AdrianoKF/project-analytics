@@ -10,6 +10,9 @@ _parser.add_argument(
 )
 _parser.add_argument("--pypi", help="Fetch PyPI metrics", action=BooleanOptionalAction)
 _parser.add_argument("--github", help="Fetch GitHub metrics", action=BooleanOptionalAction)
+_parser.add_argument(
+    "name", help="GitHub project name (will infer PyPI package name automatically)"
+)
 
 _parser.set_defaults(
     date=datetime.datetime.utcnow(),
