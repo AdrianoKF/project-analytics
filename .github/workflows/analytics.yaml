@@ -31,7 +31,7 @@ jobs:
           git checkout origin/data -- data/
       - uses: "google-github-actions/auth@v2"
         with:
-          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
+          credentials_json: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
       - name: Collect analytics
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
