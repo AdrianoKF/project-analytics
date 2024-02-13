@@ -7,13 +7,14 @@ name = "gh-project-metrics"
 dynamic = ["version"]
 description = ""
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 keywords = []
 authors = [{ name = "Adrian Rumpold", email = "a.rumpold@gmail.com" }]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
@@ -56,6 +57,8 @@ where = ["src"]
 # explicitly set src folder for isort to understand first-party imports correctly.
 src = ["src"]
 line-length = 100
+
+[tool.ruff.lint]
 # Enable pycodestyle errors & warnings (`E`, `W`), Pyflakes (`F`), and isort (`I`) by default.
 select = ["E", "F", "I", "W"]
 ignore = [
