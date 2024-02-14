@@ -1,0 +1,24 @@
+# Credential files created by `google-github-actions/auth` action
+gha-creds-*.json
+
+# Python caches
+.*_cache
+**/__pycache__
+**/*.pyc
+
+# Virtual environments
+venv
+.venv
+
+# Direnv
+.direnv
+.envrc
+
+# VS Code
+.vscode
+
+# Source code (not to be committed on the orphan `data` branch)
+src
+
+# Other local tooling
+.python-version
