@@ -52,5 +52,6 @@ ORDER BY
         """
         client = bigquery.Client()
         df: pd.DataFrame = client.query_and_wait(query).to_dataframe()
+        df["date"] = df["date"].astype("datetime64[ns, UTC]")  # match existing data
         df = df.set_index(["version", "date"])
         return df
