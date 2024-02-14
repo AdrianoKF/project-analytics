@@ -2,6 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 
+# Example: "2023-08-18 00:00:00+00:00"
+TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S%z"
+
 
 def combine(
     df1: pd.DataFrame,
@@ -51,7 +54,10 @@ def combine_csv(
     write_df = df.copy()
     if outfile.exists():
         old_df = pd.read_csv(
-            outfile, parse_dates=True, index_col=write_df.index.names, **(read_kwargs or {})
+            outfile,
+            date_format=TIMESTAMP_FORMAT,
+            index_col=write_df.index.names,
+            **(read_kwargs or {}),
         )
         write_df = combine(write_df, old_df, sort_kwargs=sort_kwargs)
     write_df.to_csv(outfile, index=True, **(write_kwargs or {}))
