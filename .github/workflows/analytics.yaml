@@ -49,5 +49,5 @@ jobs:
           today=$(date +"%F")
           git add data/
           git add plots/
-          git commit -m "Add raw data and plots for $today"
+          git commit -m "Add raw data and plots for $today" || true  # Don't fail on re-runs for the same day
           git push origin data
