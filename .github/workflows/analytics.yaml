@@ -38,7 +38,11 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          project-analytics aai-institute/lakefs-spec --supabase
+          project-analytics aai-institute/lakefs-spec
+      - name: Collect analytics for nnbench
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
           project-analytics aai-institute/nnbench
       - name: Commit report
         run: |
