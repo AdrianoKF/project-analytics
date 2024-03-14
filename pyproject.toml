@@ -27,6 +27,7 @@ dependencies = [
   "db-dtypes",             # BigQuery to Pandas
   "plotly",
   "kaleido",               # Plotly image export
+  "supabase",
 ]
 
 [project.optional-dependencies]
