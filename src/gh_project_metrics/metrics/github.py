@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 from github.Repository import Repository
 
+from gh_project_metrics.metrics import MetricsProvider, metric
 from gh_project_metrics.util import combine_csv
 
 
@@ -14,8 +15,10 @@ class MetricsConfig:
     aggregate_time: str
 
 
-class GithubMetrics:
+class GithubMetrics(MetricsProvider):
     def __init__(self, repo: Repository, config: MetricsConfig) -> None:
+        super().__init__()
+
         self.repo = repo
         self.config = config
 
@@ -39,6 +42,7 @@ class GithubMetrics:
         combine_csv(self.clones(), outdir / "clones.csv")
 
     @cache
+    @metric
     def stars(self) -> pd.DataFrame:
         df = pd.DataFrame(
             [
@@ -55,6 +59,7 @@ class GithubMetrics:
         return stars_over_time
 
     @cache
+    @metric
     def views(self) -> pd.DataFrame:
         per = self._github_api_period
         view_traffic = self.repo.get_views_traffic(per)
@@ -74,6 +79,7 @@ class GithubMetrics:
         return df.set_index("date")
 
     @cache
+    @metric
     def clones(self) -> pd.DataFrame:
         per = self._github_api_period
         clone_traffic = self.repo.get_clones_traffic(per)
@@ -93,7 +99,8 @@ class GithubMetrics:
         return df.set_index("date")
 
     @cache
-    def referrers(self):
+    @metric
+    def referrers(self) -> pd.DataFrame:
         df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])
         return df.set_index("referrer")
 

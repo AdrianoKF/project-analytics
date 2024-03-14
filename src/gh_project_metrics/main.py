@@ -7,6 +7,7 @@ import plotly.express as px
 from github import Github
 
 from gh_project_metrics.cli import args
+from gh_project_metrics.db import DatabaseWriter, SupabaseWriter
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
 from gh_project_metrics.metrics.pypi import PyPIMetrics
 from gh_project_metrics.plotting import PLOT_TEMPLATE, add_weekends, format_plot, write_plot
@@ -21,6 +22,7 @@ def github_metrics(
     datadir: Path,
     combined_data_dir: Path | None = None,
     plotdir: Path | None = None,
+    db_writer: DatabaseWriter | None = None,
 ) -> None:
     gh = Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN"))
     repo = gh.get_repo(repo_name)
@@ -49,6 +51,10 @@ def github_metrics(
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
         metrics.dump_raw_data(combined_data_dir)
+
+    if db_writer:
+        for metric in metrics:
+            db_writer.write(df=metric.data, table=metric.name)
 
     if not plotdir:
         return
@@ -106,6 +112,7 @@ def pypi_metrics(
     datadir: Path,
     combined_data_dir: Path | None = None,
     plotdir: Path | None = None,
+    db_writer: DatabaseWriter | None = None,
 ) -> None:
     metrics = PyPIMetrics(package_name=package_name)
     downloads = metrics.downloads()
@@ -113,6 +120,10 @@ def pypi_metrics(
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
         metrics.dump_raw_data(combined_data_dir)
+
+    if db_writer:
+        for metric in metrics:
+            db_writer.write(df=metric.data, table=metric.name)
 
     if not plotdir:
         return
@@ -150,6 +161,11 @@ def run():
     project_name = github_name.split("/")[-1]
     pypi_name = project_name  # XXX: Assumes package name matches project name
 
+    db_writer = None
+    if args.supabase:
+        logging.info("Enabling logging to Supabase")
+        db_writer = SupabaseWriter(project_name)
+
     datadir = Path.cwd() / "data" / project_name / today
     datadir.mkdir(exist_ok=True, parents=True)
 
@@ -165,11 +181,23 @@ def run():
 
     if args.github:
         logging.info("Collecting GitHub metrics")
-        github_metrics(github_name, datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
+        github_metrics(
+            github_name,
+            datadir,
+            combined_data_dir=combined_data_dir,
+            plotdir=plotdir,
+            db_writer=db_writer,
+        )
 
     if args.pypi:
         logging.info("Collecting PyPI metrics")
-        pypi_metrics(pypi_name, datadir, combined_data_dir=combined_data_dir, plotdir=plotdir)
+        pypi_metrics(
+            pypi_name,
+            datadir,
+            combined_data_dir=combined_data_dir,
+            plotdir=plotdir,
+            db_writer=db_writer,
+        )
 
 
 if __name__ == "__main__":

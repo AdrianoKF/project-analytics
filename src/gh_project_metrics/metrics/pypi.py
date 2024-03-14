@@ -4,10 +4,11 @@ from pathlib import Path
 import pandas as pd
 from google.cloud import bigquery
 
+from gh_project_metrics.metrics import MetricsProvider, metric
 from gh_project_metrics.util import combine_csv
 
 
-class PyPIMetrics:
+class PyPIMetrics(MetricsProvider):
     """PyPI package metrics collector
 
     Attributes
@@ -17,6 +18,8 @@ class PyPIMetrics:
     """
 
     def __init__(self, package_name: str) -> None:
+        super().__init__()
+
         self.package_name = package_name
 
     def dump_raw_data(self, outdir: Path) -> None:
@@ -30,6 +33,7 @@ class PyPIMetrics:
         )
 
     @cache
+    @metric
     def downloads(self) -> pd.DataFrame:
         query = f"""
 SELECT
