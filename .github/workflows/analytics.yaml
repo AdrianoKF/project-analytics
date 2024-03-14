@@ -32,13 +32,13 @@ jobs:
       - uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
-      - name: Collect analytics
+      - name: Collect analytics for lakeFS-spec
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          project-analytics aai-institute/lakefs-spec
+          project-analytics --supabase aai-institute/lakefs-spec
       - name: Collect analytics for nnbench
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
