@@ -47,6 +47,8 @@ WHERE
   -- Only query the last 30 days of history
   AND DATE(timestamp) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
   AND CURRENT_DATE()
+  -- exclude known crawlers, like PyPI mirror clients
+  AND details.installer.name NOT IN ("bandersnatch", "devpi")
 GROUP BY
   version,
   `date`
