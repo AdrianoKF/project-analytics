@@ -60,6 +60,7 @@ class GithubMetrics(MetricsProvider):
         # Extend the index to now (otherwise, it will end at the time of the latest star)
         idx = stars_over_time.index
         idx = idx.union(pd.date_range(idx[-1], end=datetime.now(timezone.utc), freq=idx.freq))
+        idx = idx.set_names(*stars_over_time.index.names)
         # ... and fill forward the missing values
         stars_over_time = stars_over_time.reindex(idx, method="ffill")
 
