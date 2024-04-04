@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import timezone
+from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
 
@@ -53,9 +53,16 @@ class GithubMetrics(MetricsProvider):
                 for sg in self.repo.get_stargazers_with_dates()
             ],
         )
-        df.set_index("date", inplace=True)
+        df = df.set_index("date")
         stars_over_time = df.resample(self.config.aggregate_time).count().cumsum()
-        stars_over_time.rename(columns={"user": "stars"}, inplace=True)
+        stars_over_time = stars_over_time.rename(columns={"user": "stars"})
+
+        # Extend the index to now (otherwise, it will end at the time of the latest star)
+        idx = stars_over_time.index
+        idx = idx.union(pd.date_range(idx[-1], end=datetime.now(timezone.utc), freq=idx.freq))
+        # ... and fill forward the missing values
+        stars_over_time = stars_over_time.reindex(idx, method="ffill")
+
         return stars_over_time
 
     @cache
