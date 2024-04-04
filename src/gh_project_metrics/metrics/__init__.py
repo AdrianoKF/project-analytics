@@ -1,6 +1,6 @@
 import inspect
 from collections.abc import Iterable
-from typing import Callable, Iterator, NamedTuple
+from typing import Any, Callable, Iterator, NamedTuple
 
 import pandas as pd
 
@@ -17,7 +17,7 @@ def metric(fn: MetricFn):
 
 class MetricsProvider(Iterable[Metric]):
     def __init__(self):
-        def _is_metric(item):
+        def _is_metric(item: Any) -> bool:
             return callable(item) and "is_metric" in inspect.get_annotations(item)
 
         metrics: list[MetricDefinition] = []
