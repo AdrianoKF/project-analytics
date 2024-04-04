@@ -1,6 +1,7 @@
 referrer,count,uniques
-github.com,43,10
+github.com,57,11
 Google,12,5
-lakefs-spec.org,8,3
-filesystem-spec.readthedocs.io,4,1
-pypi.org,1,1
+lakefs-spec.org,9,4
+filesystem-spec.readthedocs.io,5,2
+pypi.org,2,2
+yandex.ru,2,1
