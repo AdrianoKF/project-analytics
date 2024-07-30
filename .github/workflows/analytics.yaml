@@ -35,15 +35,13 @@ jobs:
       - name: Collect analytics for lakeFS-spec
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          project-analytics --supabase aai-institute/lakefs-spec
+          project-analytics --bigquery --bigquery-dataset-prefix="analytics_" aai-institute/lakefs-spec
       - name: Collect analytics for nnbench
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          project-analytics aai-institute/nnbench
+          project-analytics --bigquery --bigquery-dataset-prefix="analytics_" aai-institute/nnbench
       - name: Commit report
         run: |
           # For proper UI integration: https://github.com/actions/checkout/pull/1184

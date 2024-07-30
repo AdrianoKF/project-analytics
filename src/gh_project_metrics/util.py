@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -61,3 +62,18 @@ def combine_csv(
         )
         write_df = combine(write_df, old_df, sort_kwargs=sort_kwargs)
     write_df.to_csv(outfile, index=True, **(write_kwargs or {}))
+
+
+def sanitize_name(name: str) -> str:
+    """A canonical, URL-safe representation of a project name
+
+    Note, that this representation is similar to RFC 1123, but normalizes
+    the name using underscores instead of dashes."""
+
+    name = name.strip().lower()
+    name = re.sub(r"[^a-z0-9\-.]", "-", name)
+    name = name.strip("-")
+    name = name.replace("-", "_")
+    name = name[:253]
+
+    return name

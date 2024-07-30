@@ -15,12 +15,19 @@ class PyPIMetrics(MetricsProvider):
     ==========
     package_name: str
         PyPI package name
+    gcp_project_id: str | None
+        Google Cloud project ID (need BigQuery job user permissions)
     """
 
-    def __init__(self, package_name: str) -> None:
+    def __init__(
+        self,
+        package_name: str,
+        gcp_project_id: str | None = None,
+    ) -> None:
         super().__init__()
 
         self.package_name = package_name
+        self.gcp_project_id = gcp_project_id
 
     def dump_raw_data(self, outdir: Path) -> None:
         if not outdir.is_dir():
@@ -56,7 +63,7 @@ ORDER BY
   version DESC,
   `date`
         """
-        client = bigquery.Client()
+        client = bigquery.Client(project=self.gcp_project_id)
         df: pd.DataFrame = client.query_and_wait(query).to_dataframe()
         df["date"] = df["date"].astype("datetime64[ns, UTC]")  # match existing data
         df = df.set_index(["version", "date"])

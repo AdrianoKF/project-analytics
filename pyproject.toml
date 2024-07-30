@@ -25,6 +25,7 @@ dependencies = [
   "PyGithub",
   "google-cloud-bigquery",
   "db-dtypes",             # BigQuery to Pandas
+  "pandas-gbq",
   "plotly",
   "kaleido",               # Plotly image export
   "supabase",

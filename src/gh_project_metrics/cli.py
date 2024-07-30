@@ -1,5 +1,4 @@
 import datetime
-import os
 from argparse import ArgumentParser, BooleanOptionalAction
 
 _parser = ArgumentParser()
@@ -19,12 +18,28 @@ _parser.add_argument(
     help="Log to Supabase (need to specify SUPABASE_URL and SUPABASE_ENV env vars)",
     action=BooleanOptionalAction,
 )
+_parser.add_argument(
+    "--gcp-project-id",
+    help="Google Cloud project ID (omit to use gcloud CLI default project)",
+)
+_parser.add_argument(
+    "--bigquery-dataset-prefix",
+    help="Name prefix for datasets created in BigQuery",
+)
+_parser.add_argument(
+    "--bigquery",
+    help="Log to Google BigQuery (need to authenticate first)",
+    action=BooleanOptionalAction,
+)
 
 _parser.set_defaults(
     date=datetime.datetime.now(tz=datetime.UTC),
     pypi=True,
     github=True,
-    supabase="SUPABASE_URL" in os.environ and "SUPABASE_KEY" in os.environ,
+    supabase=False,
+    gcp_project_id=None,
+    bigquery=False,
+    bigquery_dataset_prefix="",
 )
 
 args = _parser.parse_args()

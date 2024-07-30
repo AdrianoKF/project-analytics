@@ -7,7 +7,8 @@ import plotly.express as px
 from github import Github
 
 from gh_project_metrics.cli import args
-from gh_project_metrics.db import DatabaseWriter, SupabaseWriter
+from gh_project_metrics.db import BigQueryWriter, DatabaseWriter, SupabaseWriter
+from gh_project_metrics.gcp import get_gcp_project_id
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
 from gh_project_metrics.metrics.pypi import PyPIMetrics
 from gh_project_metrics.plotting import PLOT_TEMPLATE, add_weekends, format_plot, write_plot
@@ -113,8 +114,9 @@ def pypi_metrics(
     combined_data_dir: Path | None = None,
     plotdir: Path | None = None,
     db_writer: DatabaseWriter | None = None,
+    gcp_project_id: str | None = None,
 ) -> None:
-    metrics = PyPIMetrics(package_name=package_name)
+    metrics = PyPIMetrics(package_name=package_name, gcp_project_id=gcp_project_id)
     downloads = metrics.downloads()
 
     metrics.dump_raw_data(datadir)
@@ -160,11 +162,20 @@ def run():
     github_name = args.name
     project_name = github_name.split("/")[-1]
     pypi_name = project_name  # XXX: Assumes package name matches project name
+    gcp_project_id = get_gcp_project_id(args)
 
     db_writer = None
     if args.supabase:
         logging.info("Enabling logging to Supabase")
         db_writer = SupabaseWriter(project_name)
+    elif args.bigquery:
+        logging.info("Enabling logging to BigQuery")
+        db_writer = BigQueryWriter(
+            project_id=gcp_project_id,
+            dataset_name=project_name,
+            dataset_name_prefix=args.bigquery_dataset_prefix,
+            create_dataset=True,
+        )
 
     datadir = Path.cwd() / "data" / project_name / today
     datadir.mkdir(exist_ok=True, parents=True)
@@ -197,6 +208,7 @@ def run():
             combined_data_dir=combined_data_dir,
             plotdir=plotdir,
             db_writer=db_writer,
+            gcp_project_id=gcp_project_id,
         )
 
 

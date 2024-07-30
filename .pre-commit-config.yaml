@@ -22,13 +22,13 @@ repos:
             --non-interactive,
           ]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.4
+    rev: v0.5.5
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.2.29
+    rev: 0.2.31
     hooks:
       - id: pip-compile
         name: pip-compile requirements.txt

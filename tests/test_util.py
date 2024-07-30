@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from gh_project_metrics.util import combine
+from gh_project_metrics.util import combine, sanitize_name
 
 
 @pytest.mark.parametrize(
@@ -55,3 +55,19 @@ from gh_project_metrics.util import combine
 def test_combine(df1: pd.DataFrame, df2: pd.DataFrame, expected: pd.DataFrame) -> None:
     actual = combine(df1, df2)
     pd.testing.assert_frame_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ["name", "expected"],
+    [
+        ("lakeFS-spec", "lakefs_spec"),
+        (" nnbench  ", "nnbench"),
+        ("foo bar", "foo_bar"),
+        ("foo_bar123", "foo_bar123"),
+        ("test-@@", "test"),
+        ("", ""),
+    ],
+)
+def test_sanitize_name(name: str, expected: str) -> None:
+    actual = sanitize_name(name)
+    assert actual == expected
