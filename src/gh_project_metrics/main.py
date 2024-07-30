@@ -8,7 +8,11 @@ from github import Github
 
 from gh_project_metrics.cli import args
 from gh_project_metrics.db import BigQueryWriter, DatabaseWriter, SupabaseWriter
-from gh_project_metrics.gcp import get_gcp_project_id
+from gh_project_metrics.gcp import (
+    DEFAULT_LOOKERSTUDIO_TEMPLATE_REPORT_ID,
+    create_lookerstudio_report_url,
+    get_gcp_project_id,
+)
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
 from gh_project_metrics.metrics.pypi import PyPIMetrics
 from gh_project_metrics.plotting import PLOT_TEMPLATE, add_weekends, format_plot, write_plot
@@ -207,9 +211,18 @@ def run():
             datadir,
             combined_data_dir=combined_data_dir,
             plotdir=plotdir,
-            db_writer=db_writer,
             gcp_project_id=gcp_project_id,
+            db_writer=db_writer,
         )
+
+    if args.bigquery:
+        report_url = create_lookerstudio_report_url(
+            DEFAULT_LOOKERSTUDIO_TEMPLATE_REPORT_ID,
+            project_name=project_name,
+            gcp_project_id=gcp_project_id,
+            bq_dataset=db_writer._dataset_ref.dataset_id,
+        )
+        logging.info(f"Looker Studio report creation URL: {report_url}")
 
 
 if __name__ == "__main__":
