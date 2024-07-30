@@ -1,10 +1,10 @@
 import inspect
 from collections.abc import Iterable
-from typing import Any, Callable, Iterator, NamedTuple
+from typing import Any, Callable, Iterator, NamedTuple, TypeAlias
 
 import pandas as pd
 
-type MetricFn = Callable[..., pd.DataFrame]  # type: ignore
+MetricFn: TypeAlias = Callable[..., pd.DataFrame]
 MetricDefinition = NamedTuple("MetricDefinition", [("name", str), ("fn", MetricFn)])
 Metric = NamedTuple("Metric", [("name", str), ("data", pd.DataFrame)])
 

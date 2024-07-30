@@ -1,7 +1,6 @@
 import abc
 import logging
 import os
-from typing import override
 
 import pandas as pd
 import pandas_gbq
@@ -9,6 +8,7 @@ import supabase
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from supabase.lib import client_options
+from typing_extensions import override
 
 from gh_project_metrics.util import TIMESTAMP_FORMAT, sanitize_name
 
