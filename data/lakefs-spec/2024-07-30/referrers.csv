@@ -1,7 +1,8 @@
 referrer,count,uniques
-Google,119,7
+Google,120,8
 github.com,87,7
 pypi.org,26,2
+filesystem-spec.readthedocs.io,16,1
 lakefs-spec.org,9,6
 com.google.android.gm,9,1
 Bing,1,1
