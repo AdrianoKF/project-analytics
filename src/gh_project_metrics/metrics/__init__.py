@@ -1,6 +1,7 @@
 import inspect
+import sys
 from collections.abc import Iterable
-from typing import Any, Callable, Iterator, NamedTuple, TypeAlias
+from typing import Any, Callable, Iterator, NamedTuple, TextIO, TypeAlias
 
 import pandas as pd
 
@@ -13,6 +14,10 @@ def metric(fn: MetricFn):
     """Marks a function as a metrics function"""
     fn.__annotations__["is_metric"] = True
     return fn
+
+
+def _header(title: str) -> str:
+    return f"------------------ [{title.upper():^20}] ------------------"
 
 
 class MetricsProvider(Iterable[Metric]):
@@ -28,3 +33,9 @@ class MetricsProvider(Iterable[Metric]):
 
     def __iter__(self) -> Iterator[Metric]:
         return (Metric(m.name, m.fn()) for m in self._metrics)
+
+    def dump(self, dest: TextIO = sys.stdout) -> None:
+        """Write all metrics from this provider into a stream (stdout by default)."""
+        for metric in self:
+            print(_header(metric.name), file=dest)
+            print(metric.data, file=dest)

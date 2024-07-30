@@ -1,7 +1,6 @@
 import logging
 import os
 from pathlib import Path
-from pprint import pp
 
 import plotly.express as px
 from github import Github
@@ -18,10 +17,6 @@ from gh_project_metrics.metrics.pypi import PyPIMetrics
 from gh_project_metrics.plotting import PLOT_TEMPLATE, add_weekends, format_plot, write_plot
 
 
-def _header(title: str) -> str:
-    return f"---------- {title:<20} ----------"
-
-
 def github_metrics(
     repo_name: str,
     datadir: Path,
@@ -34,24 +29,11 @@ def github_metrics(
     config = MetricsConfig(aggregate_time="D")
 
     metrics = GithubMetrics(repo, config)
+    metrics.dump()
 
-    print(_header("Stars"))
     stars = metrics.stars()
-    pp(stars)
-
-    print(_header("Views"))
     views = metrics.views()
-    pp(views)
-
-    print(_header("Clones"))
     clones = metrics.clones()
-    pp(clones)
-
-    print(_header("Collaborators"))
-    pp(metrics.referrers())
-
-    print(_header("History of time-series metrics"))
-    pp(metrics.history())
 
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
@@ -121,7 +103,9 @@ def pypi_metrics(
     gcp_project_id: str | None = None,
 ) -> None:
     metrics = PyPIMetrics(package_name=package_name, gcp_project_id=gcp_project_id)
+
     downloads = metrics.downloads()
+    metrics.dump()
 
     metrics.dump_raw_data(datadir)
     if combined_data_dir:
@@ -165,10 +149,10 @@ def run():
 
     github_name = args.name
     project_name = github_name.split("/")[-1]
-    pypi_name = project_name  # XXX: Assumes package name matches project name
+    pypi_name = project_name.lower()  # XXX: Assumes package name matches project name in lowercase
     gcp_project_id = get_gcp_project_id(args)
 
-    db_writer = None
+    db_writer: DatabaseWriter | None = None
     if args.supabase:
         logging.info("Enabling logging to Supabase")
         db_writer = SupabaseWriter(project_name)

@@ -16,7 +16,7 @@ def get_gcp_project_id(args: argparse.Namespace) -> str | None:
 def create_lookerstudio_report_url(
     template_report_id: str, project_name: str, gcp_project_id: str, bq_dataset: str
 ) -> str:
-    tables = ["referrers", "views", "stars", "downloads", "views", "clones"]
+    tables = ["referrers", "views", "stars", "downloads", "releases", "views", "clones"]
     params = {
         "c.reportId": template_report_id,
         "r.reportName": f"Project metrics for {project_name}",

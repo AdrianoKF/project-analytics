@@ -1,7 +1,9 @@
+import warnings
 from functools import cache
 from pathlib import Path
 
 import pandas as pd
+import requests
 from google.cloud import bigquery
 
 from gh_project_metrics.metrics import MetricsProvider, metric
@@ -65,6 +67,29 @@ ORDER BY
         """
         client = bigquery.Client(project=self.gcp_project_id)
         df: pd.DataFrame = client.query_and_wait(query).to_dataframe()
+        if len(df) == 0:
+            warnings.warn("BigQuery returned empty DataFrame", RuntimeWarning)
+
         df["date"] = df["date"].astype("datetime64[ns, UTC]")  # match existing data
         df = df.set_index(["version", "date"])
+        return df
+
+    @cache
+    @metric
+    def releases(self) -> pd.DataFrame:
+        r = requests.get(f"https://pypi.org/pypi/{self.package_name}/json")
+        r.raise_for_status()
+        data = r.json()
+        records = [
+            {
+                "version": version,
+                "upload_time": rd["upload_time"],
+                "yanked": rd["yanked"],
+            }
+            for version, release_data in data["releases"].items()
+            for rd in release_data
+            if rd["packagetype"] == "bdist_wheel"
+        ]
+        df = pd.DataFrame.from_records(records)
+        df = df.set_index("version").sort_index(ascending=False)
         return df
