@@ -17,14 +17,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: |
-            requirements.txt
-            pyproject.toml
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install -e . --no-deps
+          pip install -U uv
+          uv pip install --system -e . -r requirements-dev.txt
+      - name: Run Python tests
+        run: pytest
       - name: Check out previous data
         run: |
           git fetch origin data
