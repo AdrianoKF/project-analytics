@@ -81,5 +81,5 @@ class BigQueryWriter(DatabaseWriter):
             df,
             project_id=self._dataset_ref.project,
             destination_table=destination_table,
-            if_exists="replace",
+            if_exists="append",
         )
