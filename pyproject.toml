@@ -27,12 +27,12 @@ dependencies = [
   "db-dtypes",             # BigQuery to Pandas
   "pandas-gbq",
   "plotly",
-  "kaleido",               # Plotly image export
+  "kaleido==0.2.1",        # Plotly image export; FIXME: 0.2.1.post1 is broken
   "supabase",
 ]
 
-[project.optional-dependencies]
-dev = [
+[tool.uv]
+dev-dependencies = [
   "build>=0.10.0",
   "pre-commit>=3.3.3",
   "pytest>=7.4.0",
@@ -58,19 +58,40 @@ zip-safe = false
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+minversion = "7"
+testpaths = ["tests"]
+log_cli_level = "INFO"
+xfail_strict = true
+filterwarnings = ["error"]
+addopts = "-ra --strict-markers --strict-config --doctest-modules --doctest-continue-on-failure"
+
+[tool.mypy]
+files = "src"
+python_version = "3.10"
+strict = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
+
 [tool.ruff]
-# explicitly set src folder for isort to understand first-party imports correctly.
-src = ["src"]
+preview = true
 line-length = 100
 
 [tool.ruff.lint]
-# Enable pycodestyle errors & warnings (`E`, `W`), Pyflakes (`F`), and isort (`I`) by default.
-select = ["E", "F", "I", "W"]
+select = [
+  "E",
+  "F",
+  "I",
+  "W",
+  "B",
+  "UP",
+  "C4",
+  "PYI",
+  "PTH",
+  "T10", # prevent stray debug breakpoints
+]
 ignore = [
-  # Line too long
-  "E501",
-  # Allow capitalized variable names
-  "F841",
+  "E501", # Line too long
 ]
 
 [tool.coverage.run]
