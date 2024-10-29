@@ -37,6 +37,11 @@ jobs:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
           uv run project-analytics --bigquery --bigquery-dataset-prefix="analytics_" aai-institute/nnbench
+      - name: Collect analytics for jobq
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          uv run project-analytics --bigquery --bigquery-dataset-prefix="analytics_" aai-institute/jobq
       - name: Commit report
         run: |
           # For proper UI integration: https://github.com/actions/checkout/pull/1184
