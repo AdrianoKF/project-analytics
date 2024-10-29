@@ -3,7 +3,6 @@ import logging
 import os
 
 import pandas as pd
-import pandas_gbq
 import supabase
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
@@ -74,12 +73,55 @@ class BigQueryWriter(DatabaseWriter):
     def write(self, df: pd.DataFrame, table: str) -> None:
         table_name = sanitize_name(table)
         destination_table = f"{self._dataset_ref.dataset_id}.{table_name}"
+
         logging.info(
             f"Writing table {table!r} to BigQuery table {destination_table!r} in project {self._dataset_ref.project!r}"
         )
-        pandas_gbq.to_gbq(
-            df,
-            project_id=self._dataset_ref.project,
-            destination_table=destination_table,
-            if_exists="append",
+
+        client = bigquery.Client(project=self._dataset_ref.project)
+
+        # Check if the destination table exists
+        try:
+            client.get_table(destination_table)
+            table_exists = True
+        except NotFound:
+            table_exists = False
+
+        if not table_exists:
+            logging.info(
+                f"Table {destination_table!r} does not exist. Creating and inserting data."
+            )
+            job_config = bigquery.LoadJobConfig()
+            load_job = client.load_table_from_dataframe(
+                df, destination_table, job_config=job_config
+            )
+            load_job.result()  # Wait for the job to complete
+            return
+
+        # Load data into a temporary table
+        temp_table = f"{destination_table}_temp"
+        job_config = bigquery.LoadJobConfig(
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
         )
+        load_job = client.load_table_from_dataframe(df, temp_table, job_config=job_config)
+        load_job.result()  # Wait for the job to complete
+
+        # Define the merge query
+        id_column = df.index.name if df.index.name else "id"
+        merge_query = f"""
+        MERGE `{destination_table}` T
+        USING `{temp_table}` S
+        ON {" AND ".join([f"T.{name} = S.{name}" for name in df.index.names]) if isinstance(df.index, pd.MultiIndex) else f"T.{id_column} = S.{id_column}"}
+        WHEN MATCHED THEN
+          UPDATE SET {", ".join([f"T.{col} = S.{col}" for col in df.columns])}
+        WHEN NOT MATCHED THEN
+          INSERT ROW
+        """
+
+        # Execute the merge query
+        logging.info(f"Merging data into destination table {destination_table!r}")
+        query_job = client.query(merge_query)
+        query_job.result()  # Wait for the job to complete
+
+        # Delete the temporary table
+        client.delete_table(temp_table)
