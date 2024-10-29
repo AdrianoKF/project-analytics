@@ -1,16 +1,24 @@
 import inspect
 import sys
-from collections.abc import Iterable
-from typing import Any, Callable, Iterator, NamedTuple, TextIO, TypeAlias
+from collections.abc import Callable, Iterable, Iterator
+from typing import Any, NamedTuple, TextIO, TypeAlias
 
 import pandas as pd
 
 MetricFn: TypeAlias = Callable[..., pd.DataFrame]
-MetricDefinition = NamedTuple("MetricDefinition", [("name", str), ("fn", MetricFn)])
-Metric = NamedTuple("Metric", [("name", str), ("data", pd.DataFrame)])
 
 
-def metric(fn: MetricFn):
+class MetricDefinition(NamedTuple):
+    name: str
+    fn: MetricFn
+
+
+class Metric(NamedTuple):
+    name: str
+    data: pd.DataFrame
+
+
+def metric(fn: MetricFn) -> MetricFn:
     """Marks a function as a metrics function"""
     fn.__annotations__["is_metric"] = True
     return fn
@@ -21,7 +29,7 @@ def _header(title: str) -> str:
 
 
 class MetricsProvider(Iterable[Metric]):
-    def __init__(self):
+    def __init__(self) -> None:
         def _is_metric(item: Any) -> bool:
             return callable(item) and "is_metric" in inspect.get_annotations(item)
 

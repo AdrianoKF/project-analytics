@@ -1,4 +1,4 @@
-import warnings
+import logging
 from functools import cache
 from pathlib import Path
 
@@ -68,7 +68,7 @@ ORDER BY
         client = bigquery.Client(project=self.gcp_project_id)
         df: pd.DataFrame = client.query_and_wait(query).to_dataframe()
         if len(df) == 0:
-            warnings.warn("BigQuery returned empty DataFrame", RuntimeWarning)
+            logging.warning("BigQuery returned empty DataFrame")
 
         df["date"] = df["date"].astype("datetime64[ns, UTC]")  # match existing data
         df = df.set_index(["version", "date"])

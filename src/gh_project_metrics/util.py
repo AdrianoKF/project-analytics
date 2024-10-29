@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -10,7 +11,7 @@ TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S%z"
 def combine(
     df1: pd.DataFrame,
     df2: pd.DataFrame,
-    sort_kwargs: dict | None = None,
+    sort_kwargs: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     if type(df1.index) is not type(df2.index):  # noqa: E721
         raise ValueError(
@@ -47,9 +48,9 @@ def combine(
 def combine_csv(
     df: pd.DataFrame,
     outfile: Path,
-    sort_kwargs: dict | None = None,
-    read_kwargs: dict | None = None,
-    write_kwargs: dict | None = None,
+    sort_kwargs: dict[str, Any] | None = None,
+    read_kwargs: dict[str, Any] | None = None,
+    write_kwargs: dict[str, Any] | None = None,
 ) -> None:
     """Write a DataFrame to a CSV file, combining with existing data, if any."""
     write_df = df.copy()

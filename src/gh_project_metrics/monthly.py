@@ -14,7 +14,7 @@ PROJECT_NAME = "lakefs-spec"
 BASE_URL = f"https://raw.githubusercontent.com/AdrianoKF/project-analytics/data/data/{PROJECT_NAME}/combined"
 
 
-def run(relative_to: datetime):
+def run(relative_to: datetime) -> None:
     # start of previous month
     start_date = relative_to + relativedelta(
         hour=0, minute=0, second=0, microsecond=0, day=1, months=-1

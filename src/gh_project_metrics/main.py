@@ -140,7 +140,7 @@ def pypi_metrics(
     write_plot(fig, plotdir, "pypi_downloads")
 
 
-def run():
+def run() -> None:
     logging.basicConfig(level=logging.INFO)
 
     # Round-trip conversion to validate input
@@ -156,7 +156,7 @@ def run():
     if args.supabase:
         logging.info("Enabling logging to Supabase")
         db_writer = SupabaseWriter(project_name)
-    elif args.bigquery:
+    elif args.bigquery and gcp_project_id:
         logging.info("Enabling logging to BigQuery")
         db_writer = BigQueryWriter(
             project_id=gcp_project_id,
@@ -199,14 +199,23 @@ def run():
             db_writer=db_writer,
         )
 
-    if args.bigquery:
-        report_url = create_lookerstudio_report_url(
-            DEFAULT_LOOKERSTUDIO_TEMPLATE_REPORT_ID,
-            project_name=project_name,
-            gcp_project_id=gcp_project_id,
-            bq_dataset=db_writer._dataset_ref.dataset_id,
-        )
-        logging.info(f"Looker Studio report creation URL: {report_url}")
+    if args.bigquery and db_writer:
+        if not isinstance(db_writer, BigQueryWriter):
+            logging.warning("BigQuery logging enabled but not using BigQueryWriter")
+        else:
+            if not gcp_project_id:
+                logging.warning(
+                    "BigQuery logging enabled but GCP project ID not provided. "
+                    "Looker Studio report creation URL will not be generated."
+                )
+            else:
+                report_url = create_lookerstudio_report_url(
+                    DEFAULT_LOOKERSTUDIO_TEMPLATE_REPORT_ID,
+                    project_name=project_name,
+                    gcp_project_id=gcp_project_id,
+                    bq_dataset=db_writer._dataset_ref.dataset_id,
+                )
+                logging.info(f"Looker Studio report creation URL: {report_url}")
 
 
 if __name__ == "__main__":

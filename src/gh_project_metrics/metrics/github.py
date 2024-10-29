@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 from github.Repository import Repository
@@ -23,7 +24,7 @@ class GithubMetrics(MetricsProvider):
         self.config = config
 
     @property
-    def _github_api_period(self):
+    def _github_api_period(self) -> Literal["day", "week"]:
         match self.config.aggregate_time:
             case "W":
                 return "week"
@@ -47,7 +48,7 @@ class GithubMetrics(MetricsProvider):
         df = pd.DataFrame(
             [
                 {
-                    "date": sg.starred_at.astimezone(timezone.utc),
+                    "date": sg.starred_at.astimezone(UTC),
                     "user": sg.user.login,
                 }
                 for sg in self.repo.get_stargazers_with_dates()
@@ -59,7 +60,7 @@ class GithubMetrics(MetricsProvider):
 
         # Extend the index to now (otherwise, it will end at the time of the latest star)
         idx = stars_over_time.index
-        idx = idx.union(pd.date_range(idx[-1], end=datetime.now(timezone.utc), freq=idx.freq))
+        idx = idx.union(pd.date_range(idx[-1], end=datetime.now(UTC), freq=idx.freq))
         idx = idx.set_names(*stars_over_time.index.names)
         # ... and fill forward the missing values
         stars_over_time = stars_over_time.reindex(idx, method="ffill")
@@ -77,7 +78,7 @@ class GithubMetrics(MetricsProvider):
         df = pd.DataFrame(
             [
                 {
-                    "date": view.timestamp.astimezone(timezone.utc),
+                    "date": view.timestamp.astimezone(UTC),
                     "count": view.count,
                     "unique": view.uniques,
                 }
@@ -97,7 +98,7 @@ class GithubMetrics(MetricsProvider):
         df = pd.DataFrame(
             [
                 {
-                    "date": view.timestamp.astimezone(timezone.utc),
+                    "date": view.timestamp.astimezone(UTC),
                     "count": view.count,
                     "unique": view.uniques,
                 }
@@ -117,7 +118,7 @@ class GithubMetrics(MetricsProvider):
         clones = self.clones()
         views = self.views()
 
-        merge_opts = dict(how="outer", left_index=True, right_index=True)
+        merge_opts = {"how": "outer", "left_index": True, "right_index": True}
         df = pd.merge(clones, views, suffixes=["_clones", "_views"], **merge_opts)
         df = pd.merge(df, stars, suffixes=["", "_stars"], **merge_opts)
 
