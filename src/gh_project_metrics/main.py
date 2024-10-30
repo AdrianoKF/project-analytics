@@ -149,15 +149,15 @@ def run() -> None:
 
     github_name = args.name
     project_name = github_name.split("/")[-1]
-    pypi_name = project_name.lower()  # XXX: Assumes package name matches project name in lowercase
+    pypi_name = args.pypi_package_name or project_name.lower()
     gcp_project_id = get_gcp_project_id(args)
 
     db_writer: DatabaseWriter | None = None
     if args.supabase:
-        logging.info("Enabling logging to Supabase")
+        logging.info(f"Enabling logging to Supabase in project {project_name}")
         db_writer = SupabaseWriter(project_name)
     elif args.bigquery and gcp_project_id:
-        logging.info("Enabling logging to BigQuery")
+        logging.info(f"Enabling logging to BigQuery in project {gcp_project_id}")
         db_writer = BigQueryWriter(
             project_id=gcp_project_id,
             dataset_name=project_name,

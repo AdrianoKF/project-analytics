@@ -32,6 +32,11 @@ _parser.add_argument(
     action=BooleanOptionalAction,
 )
 
+_parser.add_argument(
+    "--pypi-package-name",
+    help="PyPI package name (if different from GitHub project name)",
+)
+
 _parser.set_defaults(
     date=datetime.datetime.now(tz=datetime.UTC),
     pypi=True,
