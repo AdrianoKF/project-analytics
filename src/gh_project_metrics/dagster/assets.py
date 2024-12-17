@@ -9,6 +9,7 @@ from dagster import (
 )
 
 from gh_project_metrics import steps
+from gh_project_metrics.dagster.resources import GoogleCloud
 from gh_project_metrics.dagster.utils import parse_partition_key
 from gh_project_metrics.metrics.github import GithubMetrics
 from gh_project_metrics.metrics.pypi import PyPIMetrics
@@ -31,14 +32,15 @@ date_partition_def = DailyPartitionsDefinition(start_date="2024-12-15")
 )
 def pypi_metrics(
     context: AssetExecutionContext,
+    gcp: GoogleCloud,
 ) -> PyPIMetrics:
     partition = parse_partition_key(context.partition_key)
 
     package = partition.project.split("/")[-1].lower()
 
-    context.log.info(f"Creating PyPI metrics for {package}, {partition.start_date}")
+    context.log.info(f"Creating PyPI metrics for {package}, {partition.date}")
 
-    return steps.pypi_metrics(package)
+    return steps.pypi_metrics(package, gcp_project_id=gcp.project_id)
 
 
 @asset(
@@ -52,7 +54,7 @@ def pypi_metrics(
 def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
     partition = parse_partition_key(context.partition_key)
 
-    context.log.info(f"Creating GitHub metrics for {partition.project}, {partition.start_date}")
+    context.log.info(f"Creating GitHub metrics for {partition.project}, {partition.date}")
     return steps.github_metrics(partition.project)
 
 
@@ -133,7 +135,7 @@ def github_plots(
     io_manager_key="plotly_io_manager",
 )
 def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dict[str, go.Figure]:
-    context.log.info(f"{pypi_metrics.package_name}")
+    context.log.info(f"{pypi_metrics.package_name}, {pypi_metrics.gcp_project_id=}")
     downloads = pypi_metrics.downloads()
 
     plots: dict[str, go.Figure] = {}

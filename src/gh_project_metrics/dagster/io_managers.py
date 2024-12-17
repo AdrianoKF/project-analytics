@@ -8,7 +8,12 @@ from gh_project_metrics.plotting import write_plot
 
 
 class PlotlyIOManager(ConfigurableIOManager):
-    plotdir: str  # Path to the directory where the PNG images will be saved
+    """A Dagster I/O manager that writes Plotly figures to PNG images.
+
+    Expects a dict of names to Plotly figures as input and writes them to PNG images,
+    in a folder structure determined by the partitioning scheme of the asset."""
+
+    root_directory: str  # Path to the directory where the PNG images will be saved
     width: int = 1200  # Width of the PNG images in pixels
     height: int = 800  # Height of the PNG images in pixels
 
@@ -16,14 +21,9 @@ class PlotlyIOManager(ConfigurableIOManager):
         raise NotImplementedError("Loading not supported")
 
     def handle_output(self, context, obj: dict[str, go.Figure]):
-        if not isinstance(obj, dict):
-            raise ValueError("Output must be a dictionary of plot names to plotly figures")
-
-        context.log.info(f"I/O manager partition key: {context.partition_key}")
-
         partition = parse_partition_key(context.partition_key)
 
-        pdir = Path(self.plotdir) / partition.project / partition.start_date.strftime("%Y-%m-%d")
+        pdir = Path(self.root_directory) / partition.project / partition.date.strftime("%Y-%m-%d")
         pdir.mkdir(parents=True, exist_ok=True)
 
         for name, plot in obj.items():
