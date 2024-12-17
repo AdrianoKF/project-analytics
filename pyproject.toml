@@ -25,12 +25,14 @@ dependencies = [
   "matplotlib",
   "PyGithub",
   "google-cloud-bigquery",
-  "db-dtypes", # BigQuery to Pandas
+  "db-dtypes",                # BigQuery to Pandas
   "pandas-gbq",
   "plotly",
-  "kaleido==0.2.1", # Plotly image export; FIXME: 0.2.1.post1 is broken
+  "kaleido==0.2.1",           # Plotly image export; FIXME: 0.2.1.post1 is broken
   "supabase",
   "loguru>=0.7.3",
+  "dagster>=1.9.5",
+  "dagster-webserver>=1.9.5",
 ]
 
 [tool.uv]
@@ -112,3 +114,7 @@ tests = ["tests", "*/gh-project-metrics/tests"]
 
 [tool.coverage.report]
 exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+
+[tool.dagster]
+module_name = "gh_project_metrics.dagster.definitions"
+project_name = "project_analytics"

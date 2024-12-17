@@ -16,12 +16,14 @@ def _plot_path(name: str, plotdir: Path) -> Path:
     return plotdir / f"{name}.png"
 
 
-def write_plot(fig: go.Figure, plotdir: Path, name: str) -> Path:
+def write_plot(
+    fig: go.Figure, plotdir: Path, name: str, width: int = 1200, height: int = 800
+) -> Path:
     image_path = _plot_path(name, plotdir)
     image = fig.to_image(
         format=image_path.suffix.strip("."),
-        width=1200,
-        height=800,
+        width=width,
+        height=height,
     )
     image_path.write_bytes(image)
 
