@@ -20,14 +20,15 @@ project_partitions_def = StaticPartitionsDefinition([
     "aai-institute/nnbench",
 ])
 date_partition_def = DailyPartitionsDefinition(start_date="2024-12-15")
+partitions_def = MultiPartitionsDefinition({
+    "date": date_partition_def,
+    "project": project_partitions_def,
+})
 
 
 @asset(
     description="PyPI download counts for a package",
-    partitions_def=MultiPartitionsDefinition({
-        "date": date_partition_def,
-        "project": project_partitions_def,
-    }),
+    partitions_def=partitions_def,
     kinds={"python", "pypi"},
 )
 def pypi_metrics(
@@ -45,10 +46,7 @@ def pypi_metrics(
 
 @asset(
     description="GitHub metrics for a project",
-    partitions_def=MultiPartitionsDefinition({
-        "date": date_partition_def,
-        "project": project_partitions_def,
-    }),
+    partitions_def=partitions_def,
     kinds={"python", "github"},
 )
 def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
@@ -59,10 +57,7 @@ def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
 
 
 @asset(
-    partitions_def=MultiPartitionsDefinition({
-        "date": date_partition_def,
-        "project": project_partitions_def,
-    }),
+    partitions_def=partitions_def,
     kinds={"python", "github", "plotly"},
     io_manager_key="plotly_io_manager",
 )
@@ -127,10 +122,7 @@ def github_plots(
 
 
 @asset(
-    partitions_def=MultiPartitionsDefinition({
-        "date": date_partition_def,
-        "project": project_partitions_def,
-    }),
+    partitions_def=partitions_def,
     kinds={"python", "pypi", "plotly"},
     io_manager_key="plotly_io_manager",
 )
