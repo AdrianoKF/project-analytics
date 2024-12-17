@@ -2,7 +2,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
+
+from gh_project_metrics.metrics.github import GithubMetrics
+from gh_project_metrics.metrics.pypi import PyPIMetrics
 
 # Default Plotly template name - see https://plotly.com/python/templates/
 PLOT_TEMPLATE = "plotly_white"
@@ -87,3 +91,81 @@ def format_plot(fig: go.Figure) -> go.Figure:
         xaxis_showgrid=False,
         xaxis_tickformat="%a, %b %-d\n%Y",
     )
+
+
+def plot_github_metrics(metrics: GithubMetrics, plotdir: Path) -> None:
+    stars = metrics.stars()
+    views = metrics.views()
+    clones = metrics.clones()
+
+    # Plot Stars
+    fig = px.line(
+        stars.reset_index(),
+        x="date",
+        y="stars",
+        markers=True,
+        title="GitHub Stars",
+        template=PLOT_TEMPLATE,
+    )
+    add_weekends(fig, start=stars.index.min(), end=stars.index.max())
+    format_plot(fig)
+    write_plot(fig, plotdir, "stars")
+
+    # Plot Clones
+    fig = px.line(
+        clones.reset_index().melt(
+            id_vars="date",
+            value_vars=["unique", "count"],
+        ),
+        x="date",
+        y="value",
+        color="variable",
+        markers=True,
+        title="GitHub Clones",
+        template=PLOT_TEMPLATE,
+    )
+    add_weekends(fig, start=clones.index.min(), end=clones.index.max())
+    format_plot(fig)
+    write_plot(fig, plotdir, "clones")
+
+    # Plot Views
+    fig = px.line(
+        views.reset_index().melt(
+            id_vars="date",
+            value_vars=["unique", "count"],
+        ),
+        x="date",
+        y="value",
+        color="variable",
+        markers=True,
+        title="GitHub Views",
+        template=PLOT_TEMPLATE,
+    )
+    add_weekends(fig, start=views.index.min(), end=views.index.max())
+    format_plot(fig)
+    write_plot(fig, plotdir, "views")
+
+
+def plot_pypi_metrics(metrics: PyPIMetrics, plotdir: Path) -> None:
+    downloads = metrics.downloads()
+
+    plot_df = downloads.reset_index()
+    fig = px.line(
+        plot_df,
+        x="date",
+        y="num_downloads",
+        color="version",
+        markers=True,
+        title="PyPI Downloads",
+        template=PLOT_TEMPLATE,
+    )
+
+    # Overlay rectangles for weekends
+    add_weekends(
+        fig,
+        start=downloads.index.levels[1].min(),
+        end=downloads.index.levels[1].max(),
+    )
+
+    format_plot(fig)
+    write_plot(fig, plotdir, "pypi_downloads")

@@ -1,11 +1,11 @@
 import abc
-import logging
 import os
 
 import pandas as pd
 import supabase
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
+from loguru import logger
 from supabase.lib import client_options
 from typing_extensions import override
 
@@ -13,6 +13,10 @@ from gh_project_metrics.util import TIMESTAMP_FORMAT, sanitize_name
 
 
 class DatabaseWriter(abc.ABC):
+    @property
+    def name(self) -> str:
+        return self.__class__.__name__
+
     @abc.abstractmethod
     def write(self, df: pd.DataFrame, table: str) -> None: ...
 
@@ -28,9 +32,13 @@ class SupabaseWriter(DatabaseWriter):
         opts = client_options.ClientOptions(schema=project_name)
         self._client = supabase.create_client(url, key, options=opts)
 
+    @property
+    def name(self) -> str:
+        return f"Supabase ({self.project_name})"
+
     @override
     def write(self, df: pd.DataFrame, table: str) -> None:
-        logging.debug("Logging data to %s", table)
+        logger.debug("Logging data to {}", table)
         data = df.reset_index()
 
         # Transform datetime types into strings, so they can be JSON-serialized
@@ -61,7 +69,7 @@ class BigQueryWriter(DatabaseWriter):
                 dataset = bigquery.Dataset(self._dataset_ref)
                 dataset.location = "EU"
                 dataset = client.create_dataset(dataset)
-                logging.info(
+                logger.info(
                     f"BigQuery dataset {self._dataset_ref.dataset_id!r} in project {self._dataset_ref.project!r} created"
                 )
             else:
@@ -69,12 +77,16 @@ class BigQueryWriter(DatabaseWriter):
                     f"BigQuery dataset {dataset_name!r} does not exist in project {project_id!r} and create_dataset=False"
                 ) from e
 
+    @property
+    def name(self) -> str:
+        return f"BigQuery ({self._dataset_ref.project}.{self._dataset_ref.dataset_id})"
+
     @override
     def write(self, df: pd.DataFrame, table: str) -> None:
         table_name = sanitize_name(table)
         destination_table = f"{self._dataset_ref.dataset_id}.{table_name}"
 
-        logging.info(
+        logger.info(
             f"Writing table {table!r} to BigQuery table {destination_table!r} in project {self._dataset_ref.project!r}"
         )
 
@@ -88,9 +100,7 @@ class BigQueryWriter(DatabaseWriter):
             table_exists = False
 
         if not table_exists:
-            logging.info(
-                f"Table {destination_table!r} does not exist. Creating and inserting data."
-            )
+            logger.info(f"Table {destination_table!r} does not exist. Creating and inserting data.")
             job_config = bigquery.LoadJobConfig()
             load_job = client.load_table_from_dataframe(
                 df, destination_table, job_config=job_config
@@ -119,7 +129,7 @@ class BigQueryWriter(DatabaseWriter):
         """
 
         # Execute the merge query
-        logging.info(f"Merging data into destination table {destination_table!r}")
+        logger.info(f"Merging data into destination table {destination_table!r}")
         query_job = client.query(merge_query)
         query_job.result()  # Wait for the job to complete
 

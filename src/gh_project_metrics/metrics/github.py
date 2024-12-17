@@ -24,6 +24,10 @@ class GithubMetrics(MetricsProvider):
         self.config = config
 
     @property
+    def name(self) -> str:
+        return f"GitHub ({self.repo.full_name})"
+
+    @property
     def _github_api_period(self) -> Literal["day", "week"]:
         match self.config.aggregate_time:
             case "W":

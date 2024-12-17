@@ -31,6 +31,10 @@ class PyPIMetrics(MetricsProvider):
         self.package_name = package_name
         self.gcp_project_id = gcp_project_id
 
+    @property
+    def name(self) -> str:
+        return f"PyPI ({self.package_name})"
+
     def dump_raw_data(self, outdir: Path) -> None:
         if not outdir.is_dir():
             raise ValueError(f"not a directory: {outdir!r}")
