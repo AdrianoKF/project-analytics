@@ -560,7 +560,7 @@ wheels = [
 
 [[package]]
 name = "gh-project-metrics"
-version = "0.1.dev50+gd4535c2.d20241217"
+version = "0.1.dev51+gdd90193.d20241217"
 source = { editable = "." }
 dependencies = [
     { name = "db-dtypes" },
