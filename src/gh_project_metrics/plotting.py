@@ -39,8 +39,7 @@ def add_weekends(
     end: pd.Timestamp,
     *,
     bar_height: int | None = None,
-    fill: str = "tozeroy",
-    fillcolor: str = "rgba(99, 110, 250, 0.1)",
+    color: str = "rgba(99, 110, 250, 0.1)",
 ) -> go.Figure:
     """Overlay weekends for a given time range to a plot
 
@@ -54,10 +53,8 @@ def add_weekends(
         End of the time range for which to plot weekends
     bar_height: int | None
         Height of the overlay bars in Y units of the base plot, automatically inferred by default
-    fill: str
-        Plotly ``Scatter` fill mode for the overlay bars
-    fillcolor: str
-        Plotly ``Scatter` fill color for the overlay bars
+    color: str
+        Fill color for the overlay bars
     """
 
     # All days covered by the index
@@ -70,13 +67,11 @@ def add_weekends(
         bar_height = yrange[1]
 
     fig.add_trace(
-        go.Scatter(
+        go.Bar(
             x=dates["date"],
             y=dates["weekend"] * bar_height,
-            fill=fill,
-            fillcolor=fillcolor,
-            line_shape="hv",
-            line_color="rgba(0,0,0,0)",
+            marker={"color": color, "line": {"width": 0}},
+            width=86400000,  # 1 day in milliseconds
             showlegend=False,
         ),
     )
@@ -86,12 +81,21 @@ def add_weekends(
 
 def format_plot(fig: go.Figure) -> go.Figure:
     """Apply default formatting to a time-series plot"""
+    fig.update_xaxes(
+        minor={
+            "dtick": "D1",
+            "ticks": "inside",
+            "ticklen": 5,
+        },
+        ticks="inside",
+        ticklen=5,
+        tickformat="%a, %b %-d\n%Y",
+    )
     return fig.update_layout(
         yaxis_title=None,
         yaxis_showticklabels=None,
         xaxis_title=None,
         xaxis_showgrid=False,
-        xaxis_tickformat="%a, %b %-d\n%Y",
     )
 
 

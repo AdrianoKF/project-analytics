@@ -45,9 +45,6 @@ def pypi_metrics(
     partition = parse_partition_key(context.partition_key)
 
     package = partition.project.split("/")[-1].lower()
-
-    context.log.info(f"Creating PyPI metrics for {package}, {partition.date}")
-
     metrics = steps.pypi_metrics(package, gcp_project_id=gcp.project_id)
     metrics.materialize()
     return metrics
@@ -61,7 +58,6 @@ def pypi_metrics(
 def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
     partition = parse_partition_key(context.partition_key)
 
-    context.log.info(f"Creating GitHub metrics for {partition.project}, {partition.date}")
     metrics = steps.github_metrics(partition.project)
     metrics.materialize()
     return metrics
@@ -75,10 +71,14 @@ def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
 def github_plots(
     context: AssetExecutionContext, github_metrics: GithubMetrics
 ) -> dict[str, go.Figure]:
-    context.log.info(f"{github_metrics.repo=}")
-    stars = github_metrics.stars()
-    views = github_metrics.views()
-    clones = github_metrics.clones()
+    partition = parse_partition_key(context.partition_key)
+
+    # Plot data starting from the beginning of the month
+    cutoff = partition.date.replace(day=1)
+
+    stars = github_metrics.stars().loc[cutoff:].reindex()  # type: ignore[misc]
+    views = github_metrics.views().loc[cutoff:]  # type: ignore[misc]
+    clones = github_metrics.clones().loc[cutoff:]  # type: ignore[misc]
 
     plots: dict[str, go.Figure] = {}
 
@@ -159,9 +159,15 @@ def github_plots(
     io_manager_key="plotly_io_manager",
 )
 def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dict[str, go.Figure]:
-    context.log.info(f"{pypi_metrics.package_name}, {pypi_metrics.gcp_project_id=}")
+    partition = parse_partition_key(context.partition_key)
+
+    # Plot data starting from the beginning of the month
+    cutoff = partition.date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    context.log.info(f"{cutoff=}")
+
     downloads = pypi_metrics.downloads()
     plot_df = downloads.reset_index()
+    plot_df = plot_df.loc[plot_df["date"] >= cutoff]
 
     plots: dict[str, go.Figure] = {}
 
@@ -175,11 +181,7 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
         template=PLOT_TEMPLATE,
     )
     # Overlay rectangles for weekends
-    add_weekends(
-        fig,
-        start=downloads.index.levels[1].min(),
-        end=downloads.index.levels[1].max(),
-    )
+    add_weekends(fig, start=plot_df["date"].min(), end=plot_df["date"].max())
     format_plot(fig)
     plots["downloads"] = fig
 
@@ -213,7 +215,6 @@ def html_report(
     pypi_plots: dict[str, go.Figure],
     github_plots: dict[str, go.Figure],
 ) -> MaterializeResult:
-    context.log.info(f"{pypi_plots=}, {github_plots=}")
     partition = parse_partition_key(context.partition_key)
 
     html5_skeleton = """

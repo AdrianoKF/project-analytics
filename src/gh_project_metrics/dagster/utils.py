@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -10,6 +10,6 @@ class Partition:
 
 def parse_partition_key(partition_key: str) -> Partition:
     [date_str, project] = partition_key.split("|", 1)
-    date = datetime.strptime(date_str, "%Y-%m-%d")
+    date = datetime.strptime(date_str, "%Y-%m-%d").astimezone(UTC)
 
     return Partition(date=date, project=project)
