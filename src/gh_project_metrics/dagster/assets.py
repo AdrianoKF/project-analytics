@@ -76,9 +76,14 @@ def github_plots(
     # Plot data starting from the beginning of the month
     cutoff = partition.date.replace(day=1)
 
-    stars = github_metrics.stars().loc[cutoff:].reindex()  # type: ignore[misc]
+    stars = github_metrics.stars().loc[cutoff:]  # type: ignore[misc]
     views = github_metrics.views().loc[cutoff:]  # type: ignore[misc]
     clones = github_metrics.clones().loc[cutoff:]  # type: ignore[misc]
+
+    # Resample to daily data, filling missing values with zero
+    stars = stars.resample("D").max().fillna(0)
+    views = views.resample("D").sum().fillna(0)
+    clones = clones.resample("D").sum().fillna(0)
 
     plots: dict[str, go.Figure] = {}
 
@@ -166,6 +171,10 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
     context.log.info(f"{cutoff=}")
 
     downloads = pypi_metrics.downloads()
+
+    # Resample to daily data, filling missing values with zero
+    downloads = downloads.groupby("version").resample("D", level="date").sum().fillna(0)
+
     plot_df = downloads.reset_index()
     plot_df = plot_df.loc[plot_df["date"] >= cutoff]
 
