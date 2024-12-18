@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from functools import cache
 from pathlib import Path
 from typing import Literal
 
@@ -18,8 +17,6 @@ class MetricsConfig:
 
 class GithubMetrics(MetricsProvider):
     def __init__(self, repo: Repository, config: MetricsConfig) -> None:
-        super().__init__()
-
         self.repo = repo
         self.config = config
 
@@ -46,7 +43,6 @@ class GithubMetrics(MetricsProvider):
         combine_csv(self.stars(), outdir / "stars.csv")
         combine_csv(self.clones(), outdir / "clones.csv")
 
-    @cache
     @metric
     def stars(self) -> pd.DataFrame:
         df = pd.DataFrame(
@@ -71,7 +67,6 @@ class GithubMetrics(MetricsProvider):
 
         return stars_over_time
 
-    @cache
     @metric
     def views(self) -> pd.DataFrame:
         per = self._github_api_period
@@ -91,7 +86,6 @@ class GithubMetrics(MetricsProvider):
         )
         return df.set_index("date")
 
-    @cache
     @metric
     def clones(self) -> pd.DataFrame:
         per = self._github_api_period
@@ -111,7 +105,6 @@ class GithubMetrics(MetricsProvider):
         )
         return df.set_index("date")
 
-    @cache
     @metric
     def referrers(self) -> pd.DataFrame:
         df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])

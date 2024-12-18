@@ -48,7 +48,9 @@ def pypi_metrics(
 
     context.log.info(f"Creating PyPI metrics for {package}, {partition.date}")
 
-    return steps.pypi_metrics(package, gcp_project_id=gcp.project_id)
+    metrics = steps.pypi_metrics(package, gcp_project_id=gcp.project_id)
+    metrics.materialize()
+    return metrics
 
 
 @asset(
@@ -60,7 +62,9 @@ def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
     partition = parse_partition_key(context.partition_key)
 
     context.log.info(f"Creating GitHub metrics for {partition.project}, {partition.date}")
-    return steps.github_metrics(partition.project)
+    metrics = steps.github_metrics(partition.project)
+    metrics.materialize()
+    return metrics
 
 
 @asset(
@@ -216,7 +220,7 @@ def html_report(
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Project Metrics</title>
+        <title>Project Metrics for {project}</title>
         <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
     </head>
     <body>
@@ -235,9 +239,15 @@ def html_report(
     out_path.mkdir(parents=True, exist_ok=True)
     out_path /= "report.html"
 
-    out_path.write_text(html5_skeleton.format(placeholder=snippets.getvalue()))
+    out_path.write_text(
+        html5_skeleton.format(
+            project=partition.project,
+            placeholder=snippets.getvalue(),
+        )
+    )
     return MaterializeResult(
         metadata={
             "path": MetadataValue.path(out_path),
+            "project": MetadataValue.text(partition.project),
         },
     )

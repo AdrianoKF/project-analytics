@@ -1,5 +1,4 @@
 import logging
-from functools import cache
 from pathlib import Path
 
 import pandas as pd
@@ -26,8 +25,6 @@ class PyPIMetrics(MetricsProvider):
         package_name: str,
         gcp_project_id: str | None = None,
     ) -> None:
-        super().__init__()
-
         self.package_name = package_name
         self.gcp_project_id = gcp_project_id
 
@@ -45,7 +42,6 @@ class PyPIMetrics(MetricsProvider):
             sort_kwargs={"level": ["version", "date"], "ascending": [False, True]},
         )
 
-    @cache
     @metric
     def downloads(self) -> pd.DataFrame:
         query = f"""
@@ -78,7 +74,6 @@ ORDER BY
         df = df.set_index(["version", "date"])
         return df
 
-    @cache
     @metric
     def releases(self) -> pd.DataFrame:
         r = requests.get(f"https://pypi.org/pypi/{self.package_name}/json")
