@@ -104,6 +104,7 @@ cython_debug/
 
 data/
 plots/
+reports/
 
 # Dagster local storage
 tmp*

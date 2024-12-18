@@ -1,9 +1,9 @@
-import os
 from pathlib import Path
 
 from dagster import (
     AssetSelection,
     Definitions,
+    EnvVar,
     build_schedule_from_partitioned_job,
     define_asset_job,
     load_assets_from_modules,
@@ -20,7 +20,7 @@ defs = Definitions(
     assets=all_assets,
     resources={
         "plotly_io_manager": io_managers.PlotlyIOManager(root_directory=str(Path.cwd() / "plots")),
-        "gcp": resources.GoogleCloud(project_id=os.getenv("GOOGLE_CLOUD_PROJECT", None)),
+        "gcp": resources.GoogleCloud(project_id=EnvVar("GOOGLE_CLOUD_PROJECT")),
     },
     schedules=[nightly_schedule],
 )
