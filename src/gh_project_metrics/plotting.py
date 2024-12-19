@@ -1,3 +1,4 @@
+import functools
 from pathlib import Path
 
 import numpy as np
@@ -7,6 +8,7 @@ import plotly.graph_objects as go
 
 from gh_project_metrics.metrics.github import GithubMetrics
 from gh_project_metrics.metrics.pypi import PyPIMetrics
+from gh_project_metrics.util import compare_version
 
 # Default Plotly template name - see https://plotly.com/python/templates/
 PLOT_TEMPLATE = "plotly_white"
@@ -175,3 +177,12 @@ def plot_pypi_metrics(metrics: PyPIMetrics, plotdir: Path) -> None:
 
     format_plot(fig)
     write_plot(fig, plotdir, "pypi_downloads")
+
+
+def order_version_legend(entries: pd.Series, reverse: bool = True) -> list[str]:
+    """Order version legend entries by version number"""
+    return sorted(
+        entries.unique(),
+        key=functools.cmp_to_key(compare_version),
+        reverse=reverse,
+    )

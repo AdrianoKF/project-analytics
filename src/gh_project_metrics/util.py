@@ -1,7 +1,10 @@
 import re
+import warnings
 from pathlib import Path
 from typing import Any
 
+import packaging
+import packaging.version
 import pandas as pd
 
 # Example: "2023-08-18 00:00:00+00:00"
@@ -78,3 +81,37 @@ def sanitize_name(name: str) -> str:
     name = name[:253]
 
     return name
+
+
+def compare_version(a: str, b: str) -> int:
+    """
+    Comparator function for PEP-440 version strings, with optional `v` prefix.
+
+    In case of invalid version strings, a warning is issued and the function returns 0.
+
+    Parameters
+    ----------
+    a : str
+        First version string
+    b : str
+        Second version string
+
+    Returns
+    -------
+    int
+        -1 if a < b,
+        0 if a == b or invalid input,
+        1 if a > b
+    """
+
+    try:
+        a_ver = packaging.version.Version(a)
+        b_ver = packaging.version.Version(b)
+        if a_ver < b_ver:
+            return -1
+        if a_ver > b_ver:
+            return 1
+        return 0
+    except packaging.version.InvalidVersion:
+        warnings.warn(f"Invalid version string: {a!r} or {b!r}", UserWarning, stacklevel=2)
+        return 0

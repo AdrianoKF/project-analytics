@@ -731,7 +731,7 @@ wheels = [
 
 [[package]]
 name = "gh-project-metrics"
-version = "0.1.dev53+g6dbb4ee.d20241217"
+version = "0.1.dev62+g76f1b51.d20241219"
 source = { editable = "." }
 dependencies = [
     { name = "dagster" },
@@ -741,6 +741,7 @@ dependencies = [
     { name = "kaleido" },
     { name = "loguru" },
     { name = "matplotlib" },
+    { name = "packaging" },
     { name = "pandas" },
     { name = "pandas-gbq" },
     { name = "plotly" },
@@ -766,6 +767,7 @@ requires-dist = [
     { name = "kaleido", specifier = "==0.2.1" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "matplotlib" },
+    { name = "packaging", specifier = ">=24.2" },
     { name = "pandas" },
     { name = "pandas-gbq" },
     { name = "plotly" },

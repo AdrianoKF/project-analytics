@@ -25,14 +25,15 @@ dependencies = [
   "matplotlib",
   "PyGithub",
   "google-cloud-bigquery",
-  "db-dtypes",                # BigQuery to Pandas
+  "db-dtypes", # BigQuery to Pandas
   "pandas-gbq",
   "plotly",
-  "kaleido==0.2.1",           # Plotly image export; FIXME: 0.2.1.post1 is broken
+  "kaleido==0.2.1", # Plotly image export; FIXME: 0.2.1.post1 is broken
   "supabase",
   "loguru>=0.7.3",
   "dagster>=1.9.5",
   "dagster-webserver>=1.9.5",
+  "packaging>=24.2",
 ]
 
 [tool.uv]

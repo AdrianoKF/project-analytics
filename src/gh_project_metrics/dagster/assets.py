@@ -17,10 +17,15 @@ from dagster import (
 
 from gh_project_metrics import steps
 from gh_project_metrics.dagster.resources import GoogleCloud
-from gh_project_metrics.dagster.utils import parse_partition_key
+from gh_project_metrics.dagster.utils import parse_partition_key, plot_date_range
 from gh_project_metrics.metrics.github import GithubMetrics
 from gh_project_metrics.metrics.pypi import PyPIMetrics
-from gh_project_metrics.plotting import PLOT_TEMPLATE, add_weekends, format_plot
+from gh_project_metrics.plotting import (
+    PLOT_TEMPLATE,
+    add_weekends,
+    format_plot,
+    order_version_legend,
+)
 
 project_partitions_def = StaticPartitionsDefinition([
     "aai-institute/lakefs-spec",
@@ -74,11 +79,11 @@ def github_plots(
     partition = parse_partition_key(context.partition_key)
 
     # Plot data starting from the beginning of the month
-    cutoff = partition.date.replace(day=1)
+    start_date, end_date = plot_date_range(partition)
 
-    stars = github_metrics.stars().loc[cutoff:]  # type: ignore[misc]
-    views = github_metrics.views().loc[cutoff:]  # type: ignore[misc]
-    clones = github_metrics.clones().loc[cutoff:]  # type: ignore[misc]
+    stars = github_metrics.stars().loc[start_date:end_date]  # type: ignore[misc]
+    views = github_metrics.views().loc[start_date:end_date]  # type: ignore[misc]
+    clones = github_metrics.clones().loc[start_date:end_date]  # type: ignore[misc]
 
     # Resample to daily data, filling missing values with zero
     stars = stars.resample("D").max().fillna(0)
@@ -167,19 +172,18 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
     partition = parse_partition_key(context.partition_key)
 
     # Plot data starting from the beginning of the month
-    cutoff = partition.date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    context.log.info(f"{cutoff=}")
+    start_date, end_date = plot_date_range(partition)
 
     downloads = pypi_metrics.downloads()
 
     # Resample to daily data, filling missing values with zero
     downloads = downloads.groupby("version").resample("D", level="date").sum().fillna(0)
-
-    plot_df = downloads.reset_index()
-    plot_df = plot_df.loc[plot_df["date"] >= cutoff]
+    plot_df = downloads.loc[(slice(None), slice(start_date, end_date)), :].reset_index()
 
     plots: dict[str, go.Figure] = {}
 
+    cat_order = {"version": order_version_legend(plot_df["version"], reverse=True)}
+    context.log.info(f"Category order: {cat_order}")
     fig = px.line(
         plot_df,
         x="date",
@@ -188,6 +192,7 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
         markers=True,
         title="PyPI Downloads",
         template=PLOT_TEMPLATE,
+        category_orders=cat_order,
     )
     # Overlay rectangles for weekends
     add_weekends(fig, start=plot_df["date"].min(), end=plot_df["date"].max())
