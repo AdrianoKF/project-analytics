@@ -1,6 +1,7 @@
 import io
 from pathlib import Path
 
+import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
@@ -159,6 +160,75 @@ def github_plots(
     pie.for_each_trace(lambda t: fig.add_trace(t, row=1, col=2))
     fig.update_layout(title="GitHub Referrers", template=PLOT_TEMPLATE)
     plots["referrers"] = fig
+
+    # Issues by status
+    issues = github_metrics.issues().reset_index()
+    fig = px.pie(
+        issues,
+        names="status",
+        title="GitHub Issues by status",
+        template=PLOT_TEMPLATE,
+    )
+    plots["issues_by_status"] = fig
+
+    # Issues: external contributions
+    fig = px.pie(
+        issues,
+        names="external_contributor",
+        title="GitHub Issues by external contributor",
+        template=PLOT_TEMPLATE,
+    )
+    plots["issues_by_external_contributor"] = fig
+
+    # Issues: Average age
+    # Age is the time between issue creation and now for open issues,
+    # or between creation and closing for closed issues
+
+    fig = plotly.subplots.make_subplots(
+        rows=1,
+        cols=2,
+        specs=[[{"type": "histogram"}, {"type": "table"}]],
+    )
+    issues["age"] = issues["resolution_time"]
+    issues.loc[issues["status"] == "open", "age"] = (
+        pd.Timestamp.now(tz=issues["created_at"].dt.tz) - issues["created_at"]
+    )
+    hist = px.histogram(
+        issues,
+        x="age",
+        color="status",
+        title="GitHub Issues: Average age",
+        template=PLOT_TEMPLATE,
+    )
+    for trace in hist.data:
+        fig.add_trace(trace, row=1, col=1)
+
+    issue_age_df = issues.groupby("status")["age"].median().reset_index()
+    # Format median age as human-readable string
+    issue_age_df["age"] = issue_age_df["age"].astype("str")
+    tbl = go.Table(
+        header={"values": issue_age_df.columns},
+        cells={"values": [issue_age_df[k].tolist() for k in issue_age_df.columns]},
+    )
+    fig.add_trace(tbl, row=1, col=2)
+    fig.update_layout(title="GitHub Issues: Median age", template=PLOT_TEMPLATE)
+    plots["issues_age"] = fig
+
+    # Issues: Distribution by labels and status
+    df = issues.loc[:, ["status", "labels"]].explode("labels").groupby("status")
+    for name, group in df:
+        context.log.info(f"Group: {name}, colums: {group.columns}")
+        context.log.info(group.value_counts("labels"))
+    labels = df.value_counts().reset_index()
+    labels.columns = ["status", "label", "count"]
+    fig = px.treemap(
+        labels,
+        path=["status", "label"],
+        values="count",
+        title="GitHub Issues: Distribution by labels and status",
+        template=PLOT_TEMPLATE,
+    )
+    plots["issues_labels"] = fig
 
     return plots
 
