@@ -6,6 +6,7 @@ import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.subplots
+
 from dagster import (
     AssetExecutionContext,
     DailyPartitionsDefinition,
@@ -15,7 +16,6 @@ from dagster import (
     StaticPartitionsDefinition,
     asset,
 )
-
 from gh_project_metrics import steps
 from gh_project_metrics.dagster.resources import GoogleCloud
 from gh_project_metrics.dagster.utils import parse_partition_key, plot_date_range
@@ -31,6 +31,7 @@ from gh_project_metrics.plotting import (
 project_partitions_def = StaticPartitionsDefinition([
     "aai-institute/lakefs-spec",
     "aai-institute/nnbench",
+    "aai-institute/pyDVL",
 ])
 date_partition_def = DailyPartitionsDefinition(start_date="2024-12-15")
 partitions_def = MultiPartitionsDefinition({
@@ -193,8 +194,11 @@ def github_plots(
     issues.loc[issues["status"] == "open", "age"] = (
         pd.Timestamp.now(tz=issues["created_at"].dt.tz) - issues["created_at"]
     )
+
+    hist_df = issues.copy()
+    hist_df["age"] = hist_df["age"].dt.days
     hist = px.histogram(
-        issues,
+        hist_df,
         x="age",
         color="status",
         title="GitHub Issues: Average age",
@@ -202,10 +206,11 @@ def github_plots(
     )
     for trace in hist.data:
         fig.add_trace(trace, row=1, col=1)
+        fig.update_xaxes(title_text="Age (days)", row=1, col=1)
 
     issue_age_df = issues.groupby("status")["age"].median().reset_index()
     # Format median age as human-readable string
-    issue_age_df["age"] = issue_age_df["age"].astype("str")
+    issue_age_df["age"] = issue_age_df["age"]
     tbl = go.Table(
         header={"values": issue_age_df.columns},
         cells={"values": [issue_age_df[k].tolist() for k in issue_age_df.columns]},

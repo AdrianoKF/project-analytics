@@ -2,8 +2,8 @@ from pathlib import Path
 
 import plotly.graph_objects as go
 import plotly.io as pio
-from dagster import ConfigurableIOManager, OutputContext
 
+from dagster import ConfigurableIOManager, OutputContext
 from gh_project_metrics.dagster.utils import parse_partition_key
 from gh_project_metrics.plotting import write_plot
 

@@ -8,7 +8,6 @@ from dagster import (
     define_asset_job,
     load_assets_from_modules,
 )
-
 from gh_project_metrics.dagster import assets, io_managers, resources  # noqa: TID252
 
 all_assets = load_assets_from_modules([assets])
