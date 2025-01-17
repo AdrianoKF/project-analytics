@@ -1,0 +1,28 @@
+name: "Dagster Asset Materialization"
+description: "A composite action to materialize a Dagster asset"
+inputs:
+  definitions_module:
+    description: "Location of Dagster workspace definitions"
+    required: true
+  asset_selector:
+    description: "Asset(s) to materialize"
+    required: true
+    default: "*" # Default to all assets
+  partition:
+    description: "Partition to materialize"
+    required: true
+  github_access_token:
+    description: "A GitHub access token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: "Run Dagster job"
+      shell: bash
+      env:
+        GITHUB_ACCESS_TOKEN: ${{ inputs.github_access_token }}
+      run: >
+        uv run dagster asset materialize
+        --select "${{ inputs.asset_selector }}"
+        --partition "${{ inputs.partition }}"
+        -m "${{ inputs.definitions_module }}"

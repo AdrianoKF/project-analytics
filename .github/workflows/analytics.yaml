@@ -14,44 +14,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
       - name: Install Python interpreter
         run: uv python install "3.13"
-      - run: uv sync --all-extras --dev
+      - run: uv sync --dev
       - name: Run Python tests
         run: uv run pytest
-      - name: Check out previous data
-        run: |
-          git fetch origin data
-          git checkout origin/data -- data/
       - uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
+      - id: today
+        run: echo "TODAY=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
       - name: Collect analytics for lakeFS-spec
-        env:
-          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: |
-          uv run project-analytics --bigquery --bigquery-dataset-prefix="analytics_" aai-institute/lakefs-spec
+        uses: ./.github/actions/dagster
+        with:
+          definitions_module: "gh_project_metrics.dagster.definitions"
+          asset_selector: "*"
+          partition: "${{ steps.today.outputs.TODAY }}|aai-institute/lakefs-spec"
       - name: Collect analytics for nnbench
-        env:
-          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: |
-          uv run project-analytics --bigquery --bigquery-dataset-prefix="analytics_" aai-institute/nnbench
-      - name: Collect analytics for jobq
-        env:
-          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: |
-          uv run project-analytics --bigquery --bigquery-dataset-prefix="analytics_" --pypi-package-name aai-jobq aai-institute/jobq
-      - name: Commit report
-        run: |
-          # For proper UI integration: https://github.com/actions/checkout/pull/1184
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git fetch
-          git switch data
-          today=$(date +"%F")
-          git add data/
-          git add plots/
-          git commit -m "Add raw data and plots for $today" || true  # Don't fail on re-runs for the same day
-          git push origin data
+        uses: ./.github/actions/dagster
+        with:
+          definitions_module: "gh_project_metrics.dagster.definitions"
+          asset_selector: "*"
+          partition: "${{ steps.today.outputs.TODAY }}|aai-institute/nnbench"
+      - name: Collect analytics for pyDVL
+        uses: ./.github/actions/dagster
+        with:
+          definitions_module: "gh_project_metrics.dagster.definitions"
+          asset_selector: "*"
+          partition: "${{ steps.today.outputs.TODAY }}|aai-institute/pyDVL"
+          github_access_token: "${{ secrets.GH_ACCESS_TOKEN }}"
