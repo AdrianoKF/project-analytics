@@ -11,6 +11,7 @@ from dagster import (
     define_asset_job,
     load_assets_from_modules,
 )
+from dagster._core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from gh_project_metrics.dagster import assets, io_managers, resources  # noqa: TID252
 
 all_assets = load_assets_from_modules([assets])
@@ -31,6 +32,7 @@ print(f"Using storage base directory: {storage_base_dir}")
 defs = Definitions(
     assets=all_assets,
     resources={
+        "io_manager": PickledObjectFilesystemIOManager(base_dir=str(storage_base_dir)),
         "plotly_io_manager": io_managers.PlotlyIOManager(base_path=storage_base_dir),
         "report_io_manager": io_managers.CustomPathRawFileIOManager(
             base_path=storage_base_dir, extension=".html"
