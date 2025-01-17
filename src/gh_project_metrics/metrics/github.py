@@ -110,6 +110,54 @@ class GithubMetrics(MetricsProvider):
         df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])
         return df.set_index("referrer")
 
+    @metric
+    def issues(self) -> pd.DataFrame:
+        issues = self.repo.get_issues(state="all")
+
+        rows = []
+        collaborators = {c.login for c in self.repo.get_collaborators()}
+        for issue in issues:
+            row = {
+                "id": issue.number,
+                "title": issue.title,
+                "created_at": issue.created_at or pd.NaT,
+                "closed_at": issue.closed_at or pd.NaT,
+                "updated_at": issue.updated_at or pd.NaT,
+                "author": issue.user.login,
+                "labels": {label.name for label in issue.labels},
+                "status": "closed" if issue.state == "closed" else "open",
+                "comments_count": issue.comments,
+                "assignees": {assignee.login for assignee in issue.assignees},
+                "has_pull_request": issue.pull_request is not None,
+                "resolution_time": issue.closed_at - issue.created_at
+                if not pd.isna(issue.closed_at)
+                else pd.NaT,
+                "external_contributor": issue.user.login not in collaborators,
+            }
+            rows.append(row)
+
+        issues_df = pd.DataFrame(
+            rows,
+            columns={
+                "id": pd.Series(dtype="int"),  # or dtype="string" if IDs are alphanumeric
+                "title": pd.Series(dtype="string"),
+                "created_at": pd.Series(dtype="datetime64[ns]"),
+                "closed_at": pd.Series(dtype="datetime64[ns]"),
+                "updated_at": pd.Series(dtype="datetime64[ns]"),
+                "author": pd.Series(dtype="string"),
+                "labels": pd.Series(dtype="object"),  # Using 'object' for lists of strings
+                "status": pd.Series(dtype="string"),  # e.g., "open" or "closed"
+                "comments_count": pd.Series(dtype="int"),
+                "assignees": pd.Series(dtype="object"),  # Using 'object' for lists of strings
+                "has_pull_request": pd.Series(dtype="bool"),
+                "resolution_time": pd.Series(dtype="timedelta64[ns]"),
+                "external_contributor": pd.Series(
+                    dtype="bool"
+                ),  # True if author is not a collaborator
+            },
+        )
+        return issues_df.set_index("id").sort_index()
+
     def history(self) -> pd.DataFrame:
         stars = self.stars()
         clones = self.clones()

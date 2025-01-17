@@ -1,20 +1,18 @@
 import io
-from pathlib import Path
 
+import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.subplots
+
 from dagster import (
     AssetExecutionContext,
     DailyPartitionsDefinition,
-    MaterializeResult,
-    MetadataValue,
     MultiPartitionsDefinition,
     StaticPartitionsDefinition,
     asset,
 )
-
 from gh_project_metrics import steps
 from gh_project_metrics.dagster.resources import GoogleCloud
 from gh_project_metrics.dagster.utils import parse_partition_key, plot_date_range
@@ -30,6 +28,7 @@ from gh_project_metrics.plotting import (
 project_partitions_def = StaticPartitionsDefinition([
     "aai-institute/lakefs-spec",
     "aai-institute/nnbench",
+    "aai-institute/pyDVL",
 ])
 date_partition_def = DailyPartitionsDefinition(start_date="2024-12-15")
 partitions_def = MultiPartitionsDefinition({
@@ -160,6 +159,79 @@ def github_plots(
     fig.update_layout(title="GitHub Referrers", template=PLOT_TEMPLATE)
     plots["referrers"] = fig
 
+    # Issues by status
+    issues = github_metrics.issues().reset_index()
+    fig = px.pie(
+        issues,
+        names="status",
+        title="GitHub Issues by status",
+        template=PLOT_TEMPLATE,
+    )
+    plots["issues_by_status"] = fig
+
+    # Issues: external contributions
+    fig = px.pie(
+        issues,
+        names="external_contributor",
+        title="GitHub Issues by external contributor",
+        template=PLOT_TEMPLATE,
+    )
+    plots["issues_by_external_contributor"] = fig
+
+    # Issues: Average age
+    # Age is the time between issue creation and now for open issues,
+    # or between creation and closing for closed issues
+
+    fig = plotly.subplots.make_subplots(
+        rows=1,
+        cols=2,
+        specs=[[{"type": "histogram"}, {"type": "table"}]],
+    )
+    issues["age"] = issues["resolution_time"]
+    issues.loc[issues["status"] == "open", "age"] = (
+        pd.Timestamp.now(tz=issues["created_at"].dt.tz) - issues["created_at"]
+    )
+
+    hist_df = issues.copy()
+    hist_df["age"] = hist_df["age"].dt.days
+    hist = px.histogram(
+        hist_df,
+        x="age",
+        color="status",
+        title="GitHub Issues: Average age",
+        template=PLOT_TEMPLATE,
+    )
+    for trace in hist.data:
+        fig.add_trace(trace, row=1, col=1)
+        fig.update_xaxes(title_text="Age (days)", row=1, col=1)
+
+    issue_age_df = issues.groupby("status")["age"].median().reset_index()
+    # Format median age as human-readable string
+    issue_age_df["age"] = issue_age_df["age"]
+    tbl = go.Table(
+        header={"values": issue_age_df.columns},
+        cells={"values": [issue_age_df[k].tolist() for k in issue_age_df.columns]},
+    )
+    fig.add_trace(tbl, row=1, col=2)
+    fig.update_layout(title="GitHub Issues: Median age", template=PLOT_TEMPLATE)
+    plots["issues_age"] = fig
+
+    # Issues: Distribution by labels and status
+    df = issues.loc[:, ["status", "labels"]].explode("labels").groupby("status")
+    for name, group in df:
+        context.log.info(f"Group: {name}, colums: {group.columns}")
+        context.log.info(group.value_counts("labels"))
+    labels = df.value_counts().reset_index()
+    labels.columns = ["status", "label", "count"]
+    fig = px.treemap(
+        labels,
+        path=["status", "label"],
+        values="count",
+        title="GitHub Issues: Distribution by labels and status",
+        template=PLOT_TEMPLATE,
+    )
+    plots["issues_labels"] = fig
+
     return plots
 
 
@@ -223,12 +295,16 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
 @asset(
     partitions_def=partitions_def,
     kinds={"python", "html"},
+    io_manager_key="report_io_manager",
+    metadata={
+        "filename": "report.html",
+    },
 )
 def html_report(
     context: AssetExecutionContext,
     pypi_plots: dict[str, go.Figure],
     github_plots: dict[str, go.Figure],
-) -> MaterializeResult:
+) -> str:
     partition = parse_partition_key(context.partition_key)
 
     html5_skeleton = """
@@ -250,19 +326,8 @@ def html_report(
     for _, plot in github_plots.items():
         plot.write_html(snippets, full_html=False, include_plotlyjs=False)
 
-    out_path = Path().cwd() / "reports" / partition.project / partition.date.strftime("%Y-%m-%d")
-    out_path.mkdir(parents=True, exist_ok=True)
-    out_path /= "report.html"
-
-    out_path.write_text(
-        html5_skeleton.format(
-            project=partition.project,
-            placeholder=snippets.getvalue(),
-        )
+    html_report = html5_skeleton.format(
+        project=partition.project,
+        placeholder=snippets.getvalue(),
     )
-    return MaterializeResult(
-        metadata={
-            "path": MetadataValue.path(out_path),
-            "project": MetadataValue.text(partition.project),
-        },
-    )
+    return html_report
