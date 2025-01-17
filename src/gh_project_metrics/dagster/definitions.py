@@ -20,7 +20,7 @@ nightly_schedule = build_schedule_from_partitioned_job(nightly_job, hour_of_day=
 
 environment = "ci" if os.getenv("CI", False) else "local"
 
-if environment != "local":
+if environment == "local":
     storage_base_dir = UPath(DagsterInstance.get().storage_directory())
 else:
     # FIXME: Hardcoded GCS bucket name
