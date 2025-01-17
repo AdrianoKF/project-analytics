@@ -23,24 +23,26 @@ jobs:
       - uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
-      - id: today
-        run: echo "TODAY=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+      - id: date
+        run: echo "PARTITION_DATE=$(date -d 'yesterday' +%Y-%m-%d)" >> $GITHUB_OUTPUT
       - name: Collect analytics for lakeFS-spec
         uses: ./.github/actions/dagster
         with:
           definitions_module: "gh_project_metrics.dagster.definitions"
           asset_selector: "*"
-          partition: "${{ steps.today.outputs.TODAY }}|aai-institute/lakefs-spec"
+          partition: "${{ steps.date.outputs.PARTITION_DATE }}|aai-institute/lakefs-spec"
+          github_access_token: "${{ secrets.GH_ACCESS_TOKEN }}"
       - name: Collect analytics for nnbench
         uses: ./.github/actions/dagster
         with:
           definitions_module: "gh_project_metrics.dagster.definitions"
           asset_selector: "*"
-          partition: "${{ steps.today.outputs.TODAY }}|aai-institute/nnbench"
+          partition: "${{ steps.date.outputs.PARTITION_DATE }}|aai-institute/nnbench"
+          github_access_token: "${{ secrets.GH_ACCESS_TOKEN }}"
       - name: Collect analytics for pyDVL
         uses: ./.github/actions/dagster
         with:
           definitions_module: "gh_project_metrics.dagster.definitions"
           asset_selector: "*"
-          partition: "${{ steps.today.outputs.TODAY }}|aai-institute/pyDVL"
+          partition: "${{ steps.date.outputs.PARTITION_DATE }}|aai-institute/pyDVL"
           github_access_token: "${{ secrets.GH_ACCESS_TOKEN }}"
