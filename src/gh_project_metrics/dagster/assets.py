@@ -1,5 +1,4 @@
 import io
-from pathlib import Path
 
 import pandas as pd
 import plotly
@@ -10,8 +9,6 @@ import plotly.subplots
 from dagster import (
     AssetExecutionContext,
     DailyPartitionsDefinition,
-    MaterializeResult,
-    MetadataValue,
     MultiPartitionsDefinition,
     StaticPartitionsDefinition,
     asset,
@@ -298,12 +295,16 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
 @asset(
     partitions_def=partitions_def,
     kinds={"python", "html"},
+    io_manager_key="report_io_manager",
+    metadata={
+        "filename": "report.html",
+    },
 )
 def html_report(
     context: AssetExecutionContext,
     pypi_plots: dict[str, go.Figure],
     github_plots: dict[str, go.Figure],
-) -> MaterializeResult:
+) -> str:
     partition = parse_partition_key(context.partition_key)
 
     html5_skeleton = """
@@ -325,19 +326,8 @@ def html_report(
     for _, plot in github_plots.items():
         plot.write_html(snippets, full_html=False, include_plotlyjs=False)
 
-    out_path = Path().cwd() / "reports" / partition.project / partition.date.strftime("%Y-%m-%d")
-    out_path.mkdir(parents=True, exist_ok=True)
-    out_path /= "report.html"
-
-    out_path.write_text(
-        html5_skeleton.format(
-            project=partition.project,
-            placeholder=snippets.getvalue(),
-        )
+    html_report = html5_skeleton.format(
+        project=partition.project,
+        placeholder=snippets.getvalue(),
     )
-    return MaterializeResult(
-        metadata={
-            "path": MetadataValue.path(out_path),
-            "project": MetadataValue.text(partition.project),
-        },
-    )
+    return html_report
