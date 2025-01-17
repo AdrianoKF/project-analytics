@@ -577,6 +577,15 @@ wheels = [
 ]
 
 [[package]]
+name = "decorator"
+version = "5.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/0c/8d907af351aa16b42caae42f9d6aa37b900c67308052d10fdce809f8d952/decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330", size = 35016 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/50/83c593b07763e1161326b3b8c6686f0f4b0f24d5526546bee538c89837d6/decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186", size = 9073 },
+]
+
+[[package]]
 name = "deprecated"
 version = "1.2.15"
 source = { registry = "https://pypi.org/simple" }
@@ -724,12 +733,31 @@ wheels = [
 ]
 
 [[package]]
+name = "gcsfs"
+version = "2024.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "decorator" },
+    { name = "fsspec" },
+    { name = "google-auth" },
+    { name = "google-auth-oauthlib" },
+    { name = "google-cloud-storage" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/20/a2/310a6f1cfdb39b2385af38620f299a8acb427b5c1fc36aa1037a81eea0d8/gcsfs-2024.12.0.tar.gz", hash = "sha256:e672413922108300ebc1fe78b8f99f3c7c1b94e7e088f5a6dc88de6d5a93d156", size = 80258 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/0e/fb76438001cf6910be9f47b3ee1e3e1490caf0d44e2ff34625a97e3fbf63/gcsfs-2024.12.0-py2.py3-none-any.whl", hash = "sha256:ec88e48f77e466723705458af85dda238e43aa69fac071efd98829d06e9f095a", size = 35488 },
+]
+
+[[package]]
 name = "gh-project-metrics"
 source = { editable = "." }
 dependencies = [
     { name = "dagster" },
     { name = "dagster-webserver" },
     { name = "db-dtypes" },
+    { name = "gcsfs" },
     { name = "google-cloud-bigquery" },
     { name = "kaleido" },
     { name = "loguru" },
@@ -756,6 +784,7 @@ requires-dist = [
     { name = "dagster", specifier = ">=1.9.5" },
     { name = "dagster-webserver", specifier = ">=1.9.5" },
     { name = "db-dtypes" },
+    { name = "gcsfs", specifier = ">=2024.12.0" },
     { name = "google-cloud-bigquery" },
     { name = "kaleido", specifier = "==0.2.1" },
     { name = "loguru", specifier = ">=0.7.3" },
@@ -855,6 +884,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b8/1f/9d1e0ba6919668608570418a9a51e47070ac15aeff64261fb092d8be94c0/google-cloud-core-2.4.1.tar.gz", hash = "sha256:9b7749272a812bde58fff28868d0c5e2f585b82f37e09a1f6ed2d4d10f134073", size = 35587 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/0f/2e2061e3fbcb9d535d5da3f58cc8de4947df1786fe6a1355960feb05a681/google_cloud_core-2.4.1-py2.py3-none-any.whl", hash = "sha256:a9e6a4422b9ac5c29f79a0ede9485473338e2ce78d91f2370c01e730eab22e61", size = 29233 },
+]
+
+[[package]]
+name = "google-cloud-storage"
+version = "2.19.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core" },
+    { name = "google-auth" },
+    { name = "google-cloud-core" },
+    { name = "google-crc32c" },
+    { name = "google-resumable-media" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/36/76/4d965702e96bb67976e755bed9828fa50306dca003dbee08b67f41dd265e/google_cloud_storage-2.19.0.tar.gz", hash = "sha256:cd05e9e7191ba6cb68934d8eb76054d9be4562aa89dbc4236feee4d7d51342b2", size = 5535488 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/94/6db383d8ee1adf45dc6c73477152b82731fa4c4a46d9c1932cc8757e0fd4/google_cloud_storage-2.19.0-py2.py3-none-any.whl", hash = "sha256:aeb971b5c29cf8ab98445082cbfe7b161a1f48ed275822f59ed3f1524ea54fba", size = 131787 },
 ]
 
 [[package]]

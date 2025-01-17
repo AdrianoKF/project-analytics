@@ -2,18 +2,18 @@ from pathlib import Path
 
 import plotly.graph_objects as go
 import plotly.io as pio
+from upath import UPath
 
-import dagster._check as check
 from dagster import (
-    ConfigurableIOManager,
     InputContext,
     OutputContext,
+    UPathIOManager,
 )
 from gh_project_metrics.dagster.utils import parse_partition_key
 from gh_project_metrics.plotting import write_plot
 
 
-class PlotlyIOManager(ConfigurableIOManager):
+class PlotlyIOManager(UPathIOManager):
     """A Dagster I/O manager that writes Plotly figures to PNG images.
 
     Expects a dict of names to Plotly figures as input and writes them to PNG images,
@@ -32,22 +32,26 @@ class PlotlyIOManager(ConfigurableIOManager):
             / Path(*context.asset_key.path)
         )
 
-    def load_input(self, context) -> dict[str, go.Figure]:
-        pdir = self._partition_path(context)
+    def load_from_path(self, context: InputContext, path: UPath) -> dict[str, go.Figure]:
         plots = {}
-        for plot_file in pdir.glob("*.json"):
+        for plot_file in path.glob("*.json"):
             name = plot_file.stem
             plots[name] = pio.from_json(plot_file.read_text())
         return plots
 
-    def handle_output(self, context, obj: dict[str, go.Figure]):
-        pdir = self._partition_path(context)
-        pdir.mkdir(parents=True, exist_ok=True)
+    def dump_to_path(self, context, obj: dict[str, go.Figure], path: UPath):
+        path.mkdir(parents=True, exist_ok=True)
         for name, plot in obj.items():
-            write_plot(plot, pdir, name, width=self.width, height=self.height)
+            write_plot(plot, path, name, width=self.width, height=self.height)
+
+    def get_path_for_partition(
+        self, context: InputContext | OutputContext, path: UPath, partition: str
+    ):
+        partition_parts = parse_partition_key(context.partition_key)
+        return path / partition_parts.project / partition_parts.date.strftime("%Y-%m-%d")
 
 
-class CustomPathRawFileIOManager(ConfigurableIOManager):
+class CustomPathRawFileIOManager(UPathIOManager):
     """A custom I/O manager that writes raw files to a custom path.
 
     Expects a dict of names to raw files as input and writes them to the specified path,
@@ -56,29 +60,18 @@ class CustomPathRawFileIOManager(ConfigurableIOManager):
     The default name for the file is the key of the asset, assets may configure the
     name by setting the `filename` metadata key."""
 
-    base_dir: str  # Path to the directory where the raw files will be saved
-    default_extension: str = "txt"  # Default extension for the raw files, unless set in metadata
+    def __init__(self, base_path=None, extension: str | None = None):
+        super().__init__(base_path)
+        self.extension = extension
 
-    def _partition_path(self, context: InputContext | OutputContext) -> Path:
-        partition = parse_partition_key(context.partition_key)
-
-        filename = (context.definition_metadata or {}).get("filename")
-        if not filename:
-            filename = f"{str(Path(*context.asset_key.path))}.{self.default_extension}"
-
-        context.log.info("Writing file to %s", filename)
-        return (
-            Path(self.base_dir)
-            / partition.project
-            / partition.date.strftime("%Y-%m-%d")
-            / check.str_param(filename, "filename")
-        )
-
-    def load_input(self, context: InputContext | OutputContext) -> str:
-        path = self._partition_path(context)
+    def load_from_path(self, context: InputContext, path: UPath) -> str:
         return path.read_text()
 
-    def handle_output(self, context: InputContext | OutputContext, obj: str):
-        path = self._partition_path(context)
-        path.parent.mkdir(parents=True, exist_ok=True)
+    def dump_to_path(self, context: OutputContext, obj: str, path: UPath):
         path.write_text(obj)
+
+    def get_path_for_partition(
+        self, context: InputContext | OutputContext, path: UPath, partition: str
+    ):
+        partition_parts = parse_partition_key(context.partition_key)
+        return path / partition_parts.project / partition_parts.date.strftime("%Y-%m-%d")
