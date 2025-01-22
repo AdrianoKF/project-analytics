@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+import bs4
 import pandas as pd
+import requests
 from github.Repository import Repository
 
 from gh_project_metrics.metrics import MetricsProvider, metric
@@ -157,6 +160,51 @@ class GithubMetrics(MetricsProvider):
             },
         )
         return issues_df.set_index("id").sort_index()
+
+    @metric
+    def dependents(self) -> pd.DataFrame:
+        dependents = []
+        more_pages = True
+
+        url = f"https://github.com/{self.repo.full_name}/network/dependents"
+        while more_pages:
+            logging.debug(f"Fetching dependents from {url}")
+
+            resp = requests.get(url)
+            resp.raise_for_status()
+            parser = bs4.BeautifulSoup(resp.text, "html.parser")
+
+            root = parser.find("div", id="dependents")
+            if root is None:
+                return pd.DataFrame()
+
+            for dep in root.find_all("div", attrs={"data-test-id": "dg-repo-pkg-dependent"}):
+                target = dep.find("a", attrs={"data-hovercard-type": "repository"})
+                owner = target["href"].split("/")[1]
+                repo = target["href"].split("/")[2]
+
+                # Replace separators in human-readable numbers
+                stars = dep.find("svg", class_="octicon-star").parent.text.replace(",", "")
+                forks = dep.find("svg", class_="octicon-repo-forked").parent.text.replace(",", "")
+
+                dependents.append({
+                    "full_name": f"{owner}/{repo}",
+                    "owner": owner,
+                    "repo": repo,
+                    "stars": int(stars),
+                    "forks": int(forks),
+                })
+
+            # Next page link with cursor pagination
+            next_button = parser.find(
+                lambda tag: tag.name == "a" and tag.text == "Next" and tag.get("href") is not None
+            )
+            if next_button is None:
+                more_pages = False
+            else:
+                url = next_button["href"]
+
+        return pd.DataFrame(dependents)
 
     def history(self) -> pd.DataFrame:
         stars = self.stars()
