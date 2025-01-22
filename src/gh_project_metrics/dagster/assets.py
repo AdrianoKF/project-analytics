@@ -207,7 +207,7 @@ def github_plots(
 
     issue_age_df = issues.groupby("status")["age"].median().reset_index()
     # Format median age as human-readable string
-    issue_age_df["age"] = issue_age_df["age"]
+    issue_age_df["age"] = issue_age_df["age"].astype(str)
     tbl = go.Table(
         header={"values": issue_age_df.columns},
         cells={"values": [issue_age_df[k].tolist() for k in issue_age_df.columns]},
