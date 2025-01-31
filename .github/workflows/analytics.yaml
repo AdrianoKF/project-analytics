@@ -46,3 +46,10 @@ jobs:
           asset_selector: "*"
           partition: "${{ steps.date.outputs.PARTITION_DATE }}|aai-institute/pyDVL"
           github_access_token: "${{ secrets.GH_ACCESS_TOKEN }}"
+      - name: Collect analytics for SBI
+        uses: ./.github/actions/dagster
+        with:
+          definitions_module: "gh_project_metrics.dagster.definitions"
+          asset_selector: "*"
+          partition: "${{ steps.date.outputs.PARTITION_DATE }}|sbi-dev/sbi"
+          github_access_token: "${{ secrets.SBI_GH_ACCESS_TOKEN }}"
