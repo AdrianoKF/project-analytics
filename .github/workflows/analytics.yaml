@@ -53,3 +53,10 @@ jobs:
           asset_selector: "*"
           partition: "${{ steps.date.outputs.PARTITION_DATE }}|sbi-dev/sbi"
           github_access_token: "${{ secrets.SBI_GH_ACCESS_TOKEN }}"
+      - name: Collect analytics for optimagic
+        uses: ./.github/actions/dagster
+        with:
+          definitions_module: "gh_project_metrics.dagster.definitions"
+          asset_selector: "*"
+          partition: "${{ steps.date.outputs.PARTITION_DATE }}|optimagic-dev/optimagic"
+          github_access_token: "${{ secrets.OPTIMAGIC_GH_ACCESS_TOKEN }}"

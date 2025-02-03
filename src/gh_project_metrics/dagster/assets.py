@@ -30,6 +30,7 @@ project_partitions_def = StaticPartitionsDefinition([
     "aai-institute/nnbench",
     "aai-institute/pyDVL",
     "sbi-dev/sbi",
+    "optimagic-dev/optimagic",
 ])
 date_partition_def = DailyPartitionsDefinition(start_date="2024-12-15")
 partitions_def = MultiPartitionsDefinition({
