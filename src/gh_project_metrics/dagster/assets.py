@@ -57,6 +57,17 @@ def pypi_metrics(
 
 
 @asset(
+    io_manager_key="pypi_history_io_manager",
+    partitions_def=partitions_def,
+)
+def pypi_history(
+    pypi_metrics: PyPIMetrics,
+):
+    """Historical PyPI data"""
+    return pypi_metrics
+
+
+@asset(
     description="GitHub metrics for a project",
     partitions_def=partitions_def,
     kinds={"python", "github"},
@@ -67,6 +78,17 @@ def github_metrics(context: AssetExecutionContext) -> GithubMetrics:
     metrics = steps.github_metrics(partition.project)
     metrics.materialize()
     return metrics
+
+
+@asset(
+    io_manager_key="github_history_io_manager",
+    partitions_def=partitions_def,
+)
+def github_history(
+    github_metrics: GithubMetrics,
+):
+    """Historical GitHub data"""
+    return github_metrics
 
 
 @asset(

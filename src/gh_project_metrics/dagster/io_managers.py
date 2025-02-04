@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -10,6 +11,7 @@ from dagster import (
     UPathIOManager,
 )
 from gh_project_metrics.dagster.utils import parse_partition_key
+from gh_project_metrics.metrics import MetricsProvider
 from gh_project_metrics.plotting import write_plot
 
 
@@ -75,3 +77,25 @@ class CustomPathRawFileIOManager(UPathIOManager):
     ):
         partition_parts = parse_partition_key(context.partition_key)
         return path / partition_parts.project / partition_parts.date.strftime("%Y-%m-%d")
+
+
+class HistoryCSVIOManager(UPathIOManager):
+    """History manager that automatically concatenates the outputs for a given asset with a combined historical dataset"""
+
+    sort_kwargs: dict[str, Any] | None = None
+
+    def __init__(self, base_path, sort_kwargs=None):
+        super().__init__(base_path)
+        self.sort_kwargs = sort_kwargs or {}
+
+    def load_from_path(self, context, path) -> MetricsProvider | None:
+        raise NotImplementedError("Loading from HistoryCSVIOManager is not supported")
+
+    def dump_to_path(self, context, obj: MetricsProvider, path):
+        obj.dump_raw_data(path)
+
+    def get_path_for_partition(
+        self, context: InputContext | OutputContext, path: UPath, partition: str
+    ):
+        partition_parts = parse_partition_key(context.partition_key)
+        return path / partition_parts.project

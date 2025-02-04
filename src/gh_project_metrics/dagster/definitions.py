@@ -37,6 +37,13 @@ defs = Definitions(
         "report_io_manager": io_managers.CustomPathRawFileIOManager(
             base_path=storage_base_dir, extension=".html"
         ),
+        "pypi_history_io_manager": io_managers.HistoryCSVIOManager(
+            base_path=storage_base_dir / "combined",
+            sort_kwargs={"level": ["version", "date"], "ascending": [False, True]},
+        ),
+        "github_history_io_manager": io_managers.HistoryCSVIOManager(
+            base_path=storage_base_dir / "combined",
+        ),
         "gcp": resources.GoogleCloud(project_id=EnvVar("GOOGLE_CLOUD_PROJECT")),
     },
     schedules=[nightly_schedule],
