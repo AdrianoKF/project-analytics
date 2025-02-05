@@ -156,6 +156,16 @@ class GithubMetrics(MetricsProvider):
                 ),  # True if author is not a collaborator
             },
         )
+
+        # Derived columns
+
+        # Issue age is the time between issue creation and now for open issues,
+        # or between creation and closing for closed issues
+        issues_df["age"] = issues_df["resolution_time"]
+        issues_df.loc[issues_df["status"] == "open", "age"] = (
+            pd.Timestamp.now(tz=issues_df["created_at"].dt.tz) - issues_df["created_at"]
+        )
+
         return issues_df.set_index("id").sort_index()
 
     def history(self) -> pd.DataFrame:

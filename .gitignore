@@ -102,9 +102,9 @@ cython_debug/
 .envrc
 .direnv
 
-data/
-plots/
-reports/
+/data/
+/plots/
+/reports/
 
 # Dagster local storage
 tmp*
