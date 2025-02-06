@@ -40,6 +40,7 @@ dependencies = [
 [tool.uv]
 dev-dependencies = [
   "build>=0.10.0",
+  "ipython>=8.32.0",
   "pre-commit>=3.3.3",
   "pytest>=7.4.0",
   "pytest-cov>=4.1.0",
@@ -50,9 +51,9 @@ dev-dependencies = [
 project-analytics = "gh_project_metrics.main:run"
 
 [project.urls]
-Documentation = "https://github.com/AdrianoKF/gh-project-metrics#readme"
-Issues = "https://github.com/AdrianoKF/gh-project-metrics/issues"
-Source = "https://github.com/AdrianoKF/gh-project-metrics"
+Documentation = "https://github.com/AdrianoKF/project-analytics#readme"
+Issues = "https://github.com/AdrianoKF/project-analytics/issues"
+Source = "https://github.com/AdrianoKF/project-analytics"
 
 # Automatically determine version number from Git tags
 [tool.setuptools_scm]
@@ -74,7 +75,7 @@ addopts = "-ra --strict-markers --strict-config --doctest-modules --doctest-cont
 
 [tool.mypy]
 files = "src"
-python_version = "3.11"
+python_version = "3.12"
 strict = false
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
