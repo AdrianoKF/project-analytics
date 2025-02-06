@@ -94,7 +94,7 @@ class HistoryCSVIOManager(UPathIOManager):
     def dump_to_path(self, context, obj: MetricsProvider, path):
         if path.protocol in ["gs", "s3"]:
             # Create a placeholder file to ensure the directory is created
-            (path.parent / ".keep").touch()
+            (path / ".keep").touch()
         else:
             path.mkdir(parents=True, exist_ok=True)
         obj.dump_raw_data(path)
