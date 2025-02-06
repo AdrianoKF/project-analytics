@@ -92,7 +92,11 @@ class HistoryCSVIOManager(UPathIOManager):
         raise NotImplementedError("Loading from HistoryCSVIOManager is not supported")
 
     def dump_to_path(self, context, obj: MetricsProvider, path):
-        path.mkdir(parents=True, exist_ok=True)
+        if path.protocol in ["gs", "s3"]:
+            # Create a placeholder file to ensure the directory is created
+            (path.parent / ".keep").touch()
+        else:
+            path.mkdir(parents=True, exist_ok=True)
         obj.dump_raw_data(path)
 
     def get_path_for_partition(
