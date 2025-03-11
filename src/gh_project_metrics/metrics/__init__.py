@@ -1,9 +1,10 @@
 import functools
 import inspect
 import sys
+from abc import abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
-from typing import Any, NamedTuple, TextIO, TypeAlias
+from typing import Any, NamedTuple, Self, TextIO, TypeAlias
 
 import pandas as pd
 
@@ -53,6 +54,12 @@ def _header(title: str) -> str:
 
 
 class MetricsProvider(Iterable[Metric]):
+    @classmethod
+    @abstractmethod
+    def from_raw_data(cls, data_dir: Path, *init_args) -> Self:
+        """Instantiate a MetricsProvider instance from raw data."""
+        pass
+
     def __iter__(self) -> Iterator[Metric]:
         def _is_metric(item: Any) -> bool:
             return callable(item) and "is_metric" in inspect.get_annotations(item)
@@ -75,15 +82,18 @@ class MetricsProvider(Iterable[Metric]):
 
     def dump(self, dest: TextIO = sys.stdout) -> None:
         """Write all metrics from this provider into a stream (stdout by default)."""
-        for metric in self:
-            print(_header(metric.name), file=dest)
-            print(metric.data, file=dest)
+        for m in self:
+            print(_header(m.name), file=dest)
+            print(m.data, file=dest)
 
-    def dump_raw_data(self, outdir: Path) -> None: ...
+    @abstractmethod
+    def dump_raw_data(self, outdir: Path) -> None:
+        """Dump raw data to a directory."""
+        pass
 
     def write(self, db: DatabaseWriter) -> None:
-        for metric in self:
-            db.write(metric.data, metric.name)
+        for m in self:
+            db.write(m.data, m.name)
 
     def __getstate__(self):
         # Serialize the object, including cache states

@@ -18,7 +18,7 @@ class Plotter(abc.ABC, Generic[T]):
         self._plot_args = plot_args.copy()
 
     @abc.abstractmethod
-    def plot(self, start_date: datetime, end_time: datetime) -> go.Figure:
+    def plot(self, start_date: datetime, end_date: datetime) -> go.Figure:
         pass
 
     @property

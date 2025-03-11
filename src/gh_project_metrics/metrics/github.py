@@ -1,24 +1,49 @@
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
+import github as gh
 import pandas as pd
 from github.Repository import Repository
 
 from gh_project_metrics.metrics import MetricsProvider, metric
-from gh_project_metrics.util import combine_csv
+from gh_project_metrics.util import TIMESTAMP_FORMAT, combine_csv
 
 
 @dataclass(slots=True, frozen=True)
 class MetricsConfig:
-    aggregate_time: str
+    aggregate_time: Literal["D", "W"]
 
 
 class GithubMetrics(MetricsProvider):
-    def __init__(self, repo: Repository, config: MetricsConfig) -> None:
-        self.repo = repo
-        self.config = config
+    # FIXME: Init args should not optional
+    def __init__(self, repo: Repository | str, config: MetricsConfig | None = None) -> None:
+        if isinstance(repo, str):
+            self.repo = gh.Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN")).get_repo(repo)
+        else:
+            self.repo = repo
+        self.config = config or MetricsConfig(aggregate_time="D")
+
+    @classmethod
+    def from_raw_data(cls, data_dir: Path, *init_args) -> Self:
+        # Read the raw data from CSV files
+        referrers = pd.read_csv(data_dir / "referrers.csv", index_col="referrer")
+        views = pd.read_csv(data_dir / "views.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
+        stars = pd.read_csv(data_dir / "stars.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
+        clones = pd.read_csv(
+            data_dir / "clones.csv", index_col="date", date_format=TIMESTAMP_FORMAT
+        )
+
+        instance = cls(*init_args)
+
+        # Restore the caches for the @metric functions called without arguments
+        instance._referrers_cache = {(): referrers}  # type: ignore[attr-defined]
+        instance._views_cache = {(): views}  # type: ignore[attr-defined]
+        instance._stars_cache = {(): stars}  # type: ignore[attr-defined]
+        instance._clones_cache = {(): clones}  # type: ignore[attr-defined]
+        return instance
 
     @property
     def name(self) -> str:

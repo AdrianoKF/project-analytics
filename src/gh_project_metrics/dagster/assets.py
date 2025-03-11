@@ -90,7 +90,7 @@ def github_history(
     io_manager_key="plotly_io_manager",
 )
 def github_plots(
-    context: AssetExecutionContext, github_metrics: GithubMetrics
+    context: AssetExecutionContext, github_history: GithubMetrics
 ) -> dict[str, go.Figure]:
     partition = parse_partition_key(context.partition_key)
 
@@ -109,7 +109,7 @@ def github_plots(
         _gh_plots.GithubIssuesByExternalContributor,
     ]
     for cls in plotters:
-        plotter = cls(github_metrics)
+        plotter = cls(github_history)
         fig = plotter.plot(start_date, end_date)
         plots[plotter.name] = fig
 

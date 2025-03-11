@@ -1,12 +1,13 @@
 import logging
 from pathlib import Path
+from typing import Self
 
 import pandas as pd
 import requests
 from google.cloud import bigquery
 
 from gh_project_metrics.metrics import MetricsProvider, metric
-from gh_project_metrics.util import combine_csv
+from gh_project_metrics.util import TIMESTAMP_FORMAT, combine_csv
 
 
 class PyPIMetrics(MetricsProvider):
@@ -19,6 +20,26 @@ class PyPIMetrics(MetricsProvider):
     gcp_project_id: str | None
         Google Cloud project ID (need BigQuery job user permissions)
     """
+
+    @classmethod
+    def from_raw_data(cls, data_dir: Path, *init_args) -> Self:
+        downloads = pd.read_csv(
+            data_dir / "pypi_downloads.csv",
+            date_format=TIMESTAMP_FORMAT,
+            index_col=["version", "date"],
+        )
+        releases = pd.read_csv(
+            data_dir / "pypi_releases.csv",
+            date_format=TIMESTAMP_FORMAT,
+            index_col="version",
+        )
+
+        instance = cls(*init_args)
+
+        # Restore the caches for the @metric functions called without arguments
+        instance._downloads_cache = {(): downloads}  # type: ignore[attr-defined]
+        instance._releases_cache = {(): releases}  # type: ignore[attr-defined]
+        return instance
 
     def __init__(
         self,
@@ -40,6 +61,11 @@ class PyPIMetrics(MetricsProvider):
             self.downloads(),
             outdir / "pypi_downloads.csv",
             sort_kwargs={"level": ["version", "date"], "ascending": [False, True]},
+        )
+        combine_csv(
+            self.releases(),
+            outdir / "pypi_releases.csv",
+            sort_kwargs={"level": "version", "ascending": False},
         )
 
     @metric
