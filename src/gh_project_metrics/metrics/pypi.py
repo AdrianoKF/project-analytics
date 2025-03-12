@@ -1,5 +1,4 @@
 import logging
-from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
@@ -18,10 +17,7 @@ class Config:
     gcp_project_id: str | None = None
 
 
-class PyPIMetric(BaseMetric, ABC):
-    def __init__(self, name: str, config: Config) -> None:
-        super().__init__(name=name)
-        self.config = config
+class PyPIMetric(BaseMetric[Config, "PyPIMetrics"]): ...
 
 
 class DownloadsMetric(PyPIMetric):
@@ -34,7 +30,7 @@ class DownloadsMetric(PyPIMetric):
         FROM
           `bigquery-public-data.pypi.file_downloads`
         WHERE
-          file.project = "{self.config.package_name}"
+          file.project = "{self.provider.config.package_name}"
           -- Only query the last 30 days of history
           AND DATE(timestamp) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
           AND CURRENT_DATE()
@@ -47,7 +43,7 @@ class DownloadsMetric(PyPIMetric):
           version DESC,
           `date`
                 """
-        client = bigquery.Client(project=self.config.gcp_project_id)
+        client = bigquery.Client(project=self.provider.config.gcp_project_id)
         df: pd.DataFrame = client.query_and_wait(query).to_dataframe()
         if len(df) == 0:
             logging.warning("BigQuery returned empty DataFrame")
@@ -69,7 +65,7 @@ class DownloadsMetric(PyPIMetric):
 
 class ReleasesMetric(PyPIMetric):
     def _compute(self, *args) -> pd.DataFrame:
-        r = requests.get(f"https://pypi.org/pypi/{self.config.package_name}/json")
+        r = requests.get(f"https://pypi.org/pypi/{self.provider.config.package_name}/json")
         r.raise_for_status()
         data = r.json()
         records = [
@@ -97,18 +93,9 @@ class ReleasesMetric(PyPIMetric):
         return cls.from_data(name, releases)
 
 
-class PyPIMetrics(MetricsProvider[PyPIMetric]):
+class PyPIMetrics(MetricsProvider[Config, PyPIMetric]):
     downloads: DownloadsMetric
     releases: ReleasesMetric
-
-    def __init__(self, config: Config) -> None:
-        super().__init__(config)
-        for metric_name, metric_cls in self._metrics_types.items():
-            if not issubclass(metric_cls, PyPIMetric):
-                raise TypeError(f"Invalid metric type: {metric_cls}")
-            metric = metric_cls(metric_name, config)
-            self._metrics.append(metric)
-            setattr(self, metric_name, metric)
 
     @property
     def name(self) -> str:

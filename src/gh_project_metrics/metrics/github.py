@@ -1,5 +1,4 @@
 import os
-from abc import ABC
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,24 +26,20 @@ class MetricsConfig:
                 return "week"
 
 
-class GithubMetric(BaseMetric, ABC):
-    def __init__(self, name: str, config: MetricsConfig) -> None:
-        super().__init__(name=name)
-        self.config = config
-
+class GithubMetric(BaseMetric[MetricsConfig, "GithubMetrics"]):
     @property
     def repo(self) -> Repository:
-        if isinstance(self.config.repo, str):
+        if isinstance(self.provider.config.repo, str):
             return gh.Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN")).get_repo(
-                self.config.repo
+                self.provider.config.repo
             )
         else:
-            return self.config.repo
+            return self.provider.config.repo
 
 
 class GithubViewsMetric(GithubMetric):
     def _compute(self, *args) -> pd.DataFrame:
-        view_traffic = self.repo.get_views_traffic(self.config.gh_aggregate_period)
+        view_traffic = self.repo.get_views_traffic(self.provider.config.gh_aggregate_period)
         if not view_traffic:
             return pd.DataFrame()
 
@@ -76,7 +71,7 @@ class GithubStarsMetric(GithubMetric):
             ],
         )
         df = df.set_index("date")
-        stars_over_time = df.resample(self.config.aggregate_time).count().cumsum()
+        stars_over_time = df.resample(self.provider.config.aggregate_time).count().cumsum()
         stars_over_time = stars_over_time.rename(columns={"user": "stars"})
 
         # Extend the index to now (otherwise, it will end at the time of the latest star)
@@ -176,7 +171,7 @@ class GithubReferrersMetric(GithubMetric):
 
 class GithubClonesMetric(GithubMetric):
     def _compute(self, *args) -> pd.DataFrame:
-        clone_traffic = self.repo.get_clones_traffic(self.config.gh_aggregate_period)
+        clone_traffic = self.repo.get_clones_traffic(self.provider.config.gh_aggregate_period)
         if not clone_traffic:
             return pd.DataFrame()
 
@@ -198,22 +193,12 @@ class GithubClonesMetric(GithubMetric):
         return cls.from_data(name, df)
 
 
-class GithubMetrics(MetricsProvider[GithubMetric]):
+class GithubMetrics(MetricsProvider[MetricsConfig, GithubMetric]):
     stars: GithubStarsMetric
     views: GithubViewsMetric
     clones: GithubClonesMetric
     issues: GithubIssuesMetric
     referrers: GithubReferrersMetric
-
-    def __init__(self, config: MetricsConfig) -> None:
-        super().__init__(config)
-        self._metrics = []
-        for metric_name, metric_cls in self._metrics_types.items():
-            if not issubclass(metric_cls, GithubMetric):
-                raise TypeError(f"Invalid metric type: {metric_cls}")
-            metric = metric_cls(metric_name, config)
-            self._metrics.append(metric)
-            setattr(self, metric_name, metric)
 
     @property
     def repo(self) -> Repository:

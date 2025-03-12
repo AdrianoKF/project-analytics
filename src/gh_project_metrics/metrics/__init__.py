@@ -10,9 +10,10 @@ from gh_project_metrics.db import DatabaseWriter
 from gh_project_metrics.util import combine_csv
 
 
-class BaseMetric(ABC):
-    def __init__(self, name: str | None = None) -> None:
+class BaseMetric[TConfig, TProvider: "MetricsProvider"](ABC):
+    def __init__(self, name: str, provider: TProvider) -> None:
         self.name = name or self.__class__.__name__
+        self.provider: MetricsProvider[TConfig, Self] = provider
         self._cache: dict[tuple, pd.DataFrame] = {}
 
     def __call__(self, *args) -> pd.DataFrame:
@@ -83,22 +84,26 @@ class MetricsProviderMeta(type):
         return cls
 
 
-class MetricsProvider[TMetric: BaseMetric](metaclass=MetricsProviderMeta):
+class MetricsProvider[TConfig, TMetric: BaseMetric](metaclass=MetricsProviderMeta):
     _metrics_types: Mapping[str, type[TMetric]]
 
-    def __init__(self, config) -> None:
-        self._metrics: list[TMetric] = []
+    def __init__(self, config: TConfig) -> None:
         self.config = config
+        self._metrics: list[TMetric] = []
+        for metric_name, metric_cls in self._metrics_types.items():
+            metric = metric_cls(metric_name, self)
+            self._metrics.append(metric)
+            setattr(self, metric_name, metric)
 
     @classmethod
-    def from_raw_data(cls, data_dir: Path) -> Self:
+    def from_raw_data(cls: type[Self], data_dir: Path) -> Self:
         """Instantiate a MetricsProvider instance from raw data."""
 
-        config = pickle.loads((data_dir / "config.pkl").read_bytes())
+        config: TConfig = pickle.loads((data_dir / "config.pkl").read_bytes())
 
         # HACK: Bypassing the constructor is ugly but required to prevent re-instantiation of the metrics
         instance = cls.__new__(cls)
-        cls.config = config
+        cls.config = config  # type: ignore[misc]
         cls._metrics = []  # type: ignore[misc]
 
         for metric_name, metric_cls in cls._metrics_types.items():
