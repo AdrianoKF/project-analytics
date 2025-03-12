@@ -121,7 +121,7 @@ def github_plots(
     kinds={"python", "pypi", "plotly"},
     io_manager_key="plotly_io_manager",
 )
-def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dict[str, go.Figure]:
+def pypi_plots(context: AssetExecutionContext, pypi_history: PyPIMetrics) -> dict[str, go.Figure]:
     partition = parse_partition_key(context.partition_key)
 
     # Plot data starting from the beginning of the month
@@ -133,7 +133,7 @@ def pypi_plots(context: AssetExecutionContext, pypi_metrics: PyPIMetrics) -> dic
         _pypi_plots.PyPIVersionsTreemap,
     ]
     for cls in plotters:
-        plotter = cls(pypi_metrics)
+        plotter = cls(pypi_history)
         fig = plotter.plot(start_date, end_date)
         plots[plotter.name] = fig
 
