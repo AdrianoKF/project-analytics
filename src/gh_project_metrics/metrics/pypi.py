@@ -55,8 +55,7 @@ class DownloadsMetric(PyPIMetric):
     @classmethod
     def load_raw(cls, name: str, indir: Path) -> Self:
         downloads = pd.read_csv(
-            # FIXME: Drop the prefix
-            indir / f"pypi_{name}.csv",
+            indir / f"{name}.csv",
             date_format=TIMESTAMP_FORMAT,
             index_col=["version", "date"],
         )
@@ -85,8 +84,7 @@ class ReleasesMetric(PyPIMetric):
     @classmethod
     def load_raw(cls, name: str, indir: Path) -> Self:
         releases = pd.read_csv(
-            # FIXME: Drop the prefix
-            indir / f"pypi_{name}.csv",
+            indir / f"{name}.csv",
             date_format=TIMESTAMP_FORMAT,
             index_col=["version"],
         )

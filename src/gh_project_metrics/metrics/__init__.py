@@ -36,7 +36,6 @@ class BaseMetric[TConfig, TProvider: "MetricsProvider"](ABC):
         df = self.compute()
         # FIXME: kwargs
         combine_csv(df, outdir / f"{self.name}.csv")
-        df.to_csv(outdir / f"{self.name}.csv", index=True)
 
     @classmethod
     @abstractmethod
