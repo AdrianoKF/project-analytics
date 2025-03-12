@@ -3,7 +3,7 @@ import os
 from github import Github
 
 from gh_project_metrics.metrics.github import GithubMetrics, MetricsConfig
-from gh_project_metrics.metrics.pypi import PyPIMetrics
+from gh_project_metrics.metrics.pypi import Config, PyPIMetrics
 
 
 def github_metrics(
@@ -11,8 +11,8 @@ def github_metrics(
 ) -> GithubMetrics:
     gh = Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN"))
     repo = gh.get_repo(repo_name)
-    config = MetricsConfig(aggregate_time="D")
-    metrics = GithubMetrics(repo, config)
+    config = MetricsConfig(repo=repo, aggregate_time="D")
+    metrics = GithubMetrics(config)
     return metrics
 
 
@@ -20,5 +20,6 @@ def pypi_metrics(
     package_name: str,
     gcp_project_id: str | None = None,
 ) -> PyPIMetrics:
-    metrics = PyPIMetrics(package_name=package_name, gcp_project_id=gcp_project_id)
+    config = Config(package_name=package_name, gcp_project_id=gcp_project_id)
+    metrics = PyPIMetrics(config)
     return metrics

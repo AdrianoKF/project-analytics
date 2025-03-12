@@ -72,7 +72,6 @@ def run() -> None:
     for metrics in all_metrics:
         logger.info(f"Dumping {metrics.name}")
 
-        metrics.dump()
         metrics.dump_raw_data(datadir)
 
         if combined_data_dir:

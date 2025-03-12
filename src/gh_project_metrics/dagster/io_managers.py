@@ -10,7 +10,6 @@ from dagster import (
     OutputContext,
     UPathIOManager,
 )
-from gh_project_metrics.dagster.assets import project_partitions_def
 from gh_project_metrics.dagster.utils import parse_partition_key
 from gh_project_metrics.metrics import MetricsProvider
 from gh_project_metrics.plotting import write_plot
@@ -92,13 +91,7 @@ class HistoryCSVIOManager(UPathIOManager):
         self.sort_kwargs = sort_kwargs or {}
 
     def load_from_path(self, context, path) -> MetricsProvider:
-        # Reverse-map the PyPI project name to the GitHub repo name (i.e., the `project` partition key)
-        partition_parts = parse_partition_key(context.partition_key)
-        repo_name = next(
-            key for key in project_partitions_def._partition_keys if partition_parts.project in key
-        )
-
-        mp = self.metrics_cls.from_raw_data(path, repo_name)
+        mp = self.metrics_cls.from_raw_data(path)
         if mp is None:
             raise RuntimeError(f"Unable to load metrics from {path}")
         return mp

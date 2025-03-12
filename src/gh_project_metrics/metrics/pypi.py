@@ -1,4 +1,6 @@
 import logging
+from abc import ABC
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
@@ -6,92 +8,46 @@ import pandas as pd
 import requests
 from google.cloud import bigquery
 
-from gh_project_metrics.metrics import MetricsProvider, metric
-from gh_project_metrics.util import TIMESTAMP_FORMAT, combine_csv
+from gh_project_metrics.metrics import BaseMetric, MetricsProvider
+from gh_project_metrics.util import TIMESTAMP_FORMAT
 
 
-class PyPIMetrics(MetricsProvider):
-    """PyPI package metrics collector
-
-    Attributes
-    ==========
+@dataclass(slots=True, frozen=True)
+class Config:
     package_name: str
-        PyPI package name
-    gcp_project_id: str | None
-        Google Cloud project ID (need BigQuery job user permissions)
-    """
+    gcp_project_id: str | None = None
 
-    @classmethod
-    def from_raw_data(cls, data_dir: Path, *init_args) -> Self:
-        downloads = pd.read_csv(
-            data_dir / "pypi_downloads.csv",
-            date_format=TIMESTAMP_FORMAT,
-            index_col=["version", "date"],
-        )
-        releases = pd.read_csv(
-            data_dir / "pypi_releases.csv",
-            date_format=TIMESTAMP_FORMAT,
-            index_col="version",
-        )
 
-        instance = cls(*init_args)
+class PyPIMetric(BaseMetric, ABC):
+    def __init__(self, name: str, config: Config) -> None:
+        super().__init__(name=name)
+        self.config = config
 
-        # Restore the caches for the @metric functions called without arguments
-        instance._downloads_cache = {(): downloads}  # type: ignore[attr-defined]
-        instance._releases_cache = {(): releases}  # type: ignore[attr-defined]
-        return instance
 
-    def __init__(
-        self,
-        package_name: str,
-        gcp_project_id: str | None = None,
-    ) -> None:
-        self.package_name = package_name
-        self.gcp_project_id = gcp_project_id
-
-    @property
-    def name(self) -> str:
-        return f"PyPI ({self.package_name})"
-
-    def dump_raw_data(self, outdir: Path) -> None:
-        if not outdir.is_dir():
-            raise ValueError(f"not a directory: {outdir!r}")
-
-        combine_csv(
-            self.downloads(),
-            outdir / "pypi_downloads.csv",
-            sort_kwargs={"level": ["version", "date"], "ascending": [False, True]},
-        )
-        combine_csv(
-            self.releases(),
-            outdir / "pypi_releases.csv",
-            sort_kwargs={"level": "version", "ascending": False},
-        )
-
-    @metric
-    def downloads(self) -> pd.DataFrame:
+class DownloadsMetric(PyPIMetric):
+    def _compute(self, *args) -> pd.DataFrame:
         query = f"""
-SELECT
-  file.version AS version,
-  DATE_TRUNC(timestamp, DAY) AS date,
-  COUNT(*) AS num_downloads
-FROM
-  `bigquery-public-data.pypi.file_downloads`
-WHERE
-  file.project = "{self.package_name}"
-  -- Only query the last 30 days of history
-  AND DATE(timestamp) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-  AND CURRENT_DATE()
-  -- exclude known crawlers, like PyPI mirror clients
-  AND details.installer.name NOT IN ("bandersnatch", "devpi")
-GROUP BY
-  version,
-  `date`
-ORDER BY
-  version DESC,
-  `date`
-        """
-        client = bigquery.Client(project=self.gcp_project_id)
+        SELECT
+          file.version AS version,
+          DATE_TRUNC(timestamp, DAY) AS date,
+          COUNT(*) AS num_downloads
+        FROM
+          `bigquery-public-data.pypi.file_downloads`
+        WHERE
+          file.project = "{self.config.package_name}"
+          -- Only query the last 30 days of history
+          AND DATE(timestamp) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+          AND CURRENT_DATE()
+          -- exclude known crawlers, like PyPI mirror clients
+          AND details.installer.name NOT IN ("bandersnatch", "devpi")
+        GROUP BY
+          version,
+          `date`
+        ORDER BY
+          version DESC,
+          `date`
+                """
+        client = bigquery.Client(project=self.config.gcp_project_id)
         df: pd.DataFrame = client.query_and_wait(query).to_dataframe()
         if len(df) == 0:
             logging.warning("BigQuery returned empty DataFrame")
@@ -100,9 +56,20 @@ ORDER BY
         df = df.set_index(["version", "date"])
         return df
 
-    @metric
-    def releases(self) -> pd.DataFrame:
-        r = requests.get(f"https://pypi.org/pypi/{self.package_name}/json")
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        downloads = pd.read_csv(
+            # FIXME: Drop the prefix
+            indir / f"pypi_{name}.csv",
+            date_format=TIMESTAMP_FORMAT,
+            index_col=["version", "date"],
+        )
+        return cls.from_data(name, downloads)
+
+
+class ReleasesMetric(PyPIMetric):
+    def _compute(self, *args) -> pd.DataFrame:
+        r = requests.get(f"https://pypi.org/pypi/{self.config.package_name}/json")
         r.raise_for_status()
         data = r.json()
         records = [
@@ -118,3 +85,31 @@ ORDER BY
         df = pd.DataFrame.from_records(records)
         df = df.set_index("version").sort_index(ascending=False)
         return df
+
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        releases = pd.read_csv(
+            # FIXME: Drop the prefix
+            indir / f"pypi_{name}.csv",
+            date_format=TIMESTAMP_FORMAT,
+            index_col=["version"],
+        )
+        return cls.from_data(name, releases)
+
+
+class PyPIMetrics(MetricsProvider[PyPIMetric]):
+    downloads: DownloadsMetric
+    releases: ReleasesMetric
+
+    def __init__(self, config: Config) -> None:
+        super().__init__(config)
+        for metric_name, metric_cls in self._metrics_types.items():
+            if not issubclass(metric_cls, PyPIMetric):
+                raise TypeError(f"Invalid metric type: {metric_cls}")
+            metric = metric_cls(metric_name, config)
+            self._metrics.append(metric)
+            setattr(self, metric_name, metric)
+
+    @property
+    def name(self) -> str:
+        return f"PyPI ({self.config.package_name})"

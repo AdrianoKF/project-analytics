@@ -1,4 +1,5 @@
 import os
+from abc import ABC
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,68 +9,63 @@ import github as gh
 import pandas as pd
 from github.Repository import Repository
 
-from gh_project_metrics.metrics import MetricsProvider, metric
-from gh_project_metrics.util import TIMESTAMP_FORMAT, combine_csv
+from gh_project_metrics.metrics import BaseMetric, MetricsProvider
+from gh_project_metrics.util import TIMESTAMP_FORMAT
 
 
 @dataclass(slots=True, frozen=True)
 class MetricsConfig:
+    repo: Repository | str
     aggregate_time: Literal["D", "W"]
 
-
-class GithubMetrics(MetricsProvider):
-    # FIXME: Init args should not optional
-    def __init__(self, repo: Repository | str, config: MetricsConfig | None = None) -> None:
-        if isinstance(repo, str):
-            self.repo = gh.Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN")).get_repo(repo)
-        else:
-            self.repo = repo
-        self.config = config or MetricsConfig(aggregate_time="D")
-
-    @classmethod
-    def from_raw_data(cls, data_dir: Path, *init_args) -> Self:
-        # Read the raw data from CSV files
-        referrers = pd.read_csv(data_dir / "referrers.csv", index_col="referrer")
-        views = pd.read_csv(data_dir / "views.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
-        stars = pd.read_csv(data_dir / "stars.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
-        clones = pd.read_csv(
-            data_dir / "clones.csv", index_col="date", date_format=TIMESTAMP_FORMAT
-        )
-
-        instance = cls(*init_args)
-
-        # Restore the caches for the @metric functions called without arguments
-        instance._referrers_cache = {(): referrers}  # type: ignore[attr-defined]
-        instance._views_cache = {(): views}  # type: ignore[attr-defined]
-        instance._stars_cache = {(): stars}  # type: ignore[attr-defined]
-        instance._clones_cache = {(): clones}  # type: ignore[attr-defined]
-        return instance
-
     @property
-    def name(self) -> str:
-        return f"GitHub ({self.repo.full_name})"
-
-    @property
-    def _github_api_period(self) -> Literal["day", "week"]:
-        match self.config.aggregate_time:
-            case "W":
-                return "week"
+    def gh_aggregate_period(self):
+        match self.aggregate_time:
             case "D":
                 return "day"
-            case val:
-                raise ValueError(f"invalid time spec: {val!r}")
+            case "W":
+                return "week"
 
-    def dump_raw_data(self, outdir: Path) -> None:
-        if not outdir.is_dir():
-            raise ValueError(f"not a directory: {outdir!r}")
 
-        self.referrers().to_csv(outdir / "referrers.csv", index=True)
-        combine_csv(self.views(), outdir / "views.csv")
-        combine_csv(self.stars(), outdir / "stars.csv")
-        combine_csv(self.clones(), outdir / "clones.csv")
+class GithubMetric(BaseMetric, ABC):
+    def __init__(self, name: str, config: MetricsConfig) -> None:
+        super().__init__(name=name)
+        self.config = config
 
-    @metric
-    def stars(self) -> pd.DataFrame:
+    @property
+    def repo(self) -> Repository:
+        if isinstance(self.config.repo, str):
+            return gh.Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN")).get_repo(
+                self.config.repo
+            )
+        else:
+            return self.config.repo
+
+
+class GithubViewsMetric(GithubMetric):
+    def _compute(self, *args) -> pd.DataFrame:
+        view_traffic = self.repo.get_views_traffic(self.config.gh_aggregate_period)
+        if not view_traffic:
+            return pd.DataFrame()
+
+        df = pd.DataFrame([
+            {
+                "date": view.timestamp.astimezone(UTC),
+                "count": view.count,
+                "unique": view.uniques,
+            }
+            for view in view_traffic["views"]
+        ])
+        return df.set_index("date")
+
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        df = pd.read_csv(indir / f"{name}.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
+        return cls.from_data(name, df)
+
+
+class GithubStarsMetric(GithubMetric):
+    def _compute(self, *args) -> pd.DataFrame:
         df = pd.DataFrame(
             [
                 {
@@ -92,51 +88,14 @@ class GithubMetrics(MetricsProvider):
 
         return stars_over_time
 
-    @metric
-    def views(self) -> pd.DataFrame:
-        per = self._github_api_period
-        view_traffic = self.repo.get_views_traffic(per)
-        if not view_traffic:
-            return pd.DataFrame()
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        df = pd.read_csv(indir / f"{name}.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
+        return cls.from_data(name, df)
 
-        df = pd.DataFrame(
-            [
-                {
-                    "date": view.timestamp.astimezone(UTC),
-                    "count": view.count,
-                    "unique": view.uniques,
-                }
-                for view in view_traffic["views"]
-            ],
-        )
-        return df.set_index("date")
 
-    @metric
-    def clones(self) -> pd.DataFrame:
-        per = self._github_api_period
-        clone_traffic = self.repo.get_clones_traffic(per)
-        if not clone_traffic:
-            return pd.DataFrame()
-
-        df = pd.DataFrame(
-            [
-                {
-                    "date": view.timestamp.astimezone(UTC),
-                    "count": view.count,
-                    "unique": view.uniques,
-                }
-                for view in clone_traffic["clones"]
-            ],
-        )
-        return df.set_index("date")
-
-    @metric
-    def referrers(self) -> pd.DataFrame:
-        df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])
-        return df.set_index("referrer")
-
-    @metric
-    def issues(self) -> pd.DataFrame:
+class GithubIssuesMetric(GithubMetric):
+    def _compute(self, *args) -> pd.DataFrame:
         issues = self.repo.get_issues(state="all")
 
         rows = []
@@ -193,13 +152,78 @@ class GithubMetrics(MetricsProvider):
 
         return issues_df.set_index("id").sort_index()
 
-    def history(self) -> pd.DataFrame:
-        stars = self.stars()
-        clones = self.clones()
-        views = self.views()
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        df = pd.read_csv(
+            indir / f"{name}.csv",
+            index_col="id",
+            date_format=TIMESTAMP_FORMAT,
+        )
+        df["age"] = pd.to_timedelta(df["age"])
+        return cls.from_data(name, df)
 
-        merge_opts = {"how": "outer", "left_index": True, "right_index": True}
-        df = pd.merge(clones, views, suffixes=["_clones", "_views"], **merge_opts)
-        df = pd.merge(df, stars, suffixes=["", "_stars"], **merge_opts)
 
-        return df
+class GithubReferrersMetric(GithubMetric):
+    def _compute(self, *args) -> pd.DataFrame:
+        df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])
+        return df.set_index("referrer")
+
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        df = pd.read_csv(indir / f"{name}.csv", index_col="referrer")
+        return cls.from_data(name, df)
+
+
+class GithubClonesMetric(GithubMetric):
+    def _compute(self, *args) -> pd.DataFrame:
+        clone_traffic = self.repo.get_clones_traffic(self.config.gh_aggregate_period)
+        if not clone_traffic:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(
+            [
+                {
+                    "date": view.timestamp.astimezone(UTC),
+                    "count": view.count,
+                    "unique": view.uniques,
+                }
+                for view in clone_traffic["clones"]
+            ],
+        )
+        return df.set_index("date")
+
+    @classmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        df = pd.read_csv(indir / f"{name}.csv", index_col="date", date_format=TIMESTAMP_FORMAT)
+        return cls.from_data(name, df)
+
+
+class GithubMetrics(MetricsProvider[GithubMetric]):
+    stars: GithubStarsMetric
+    views: GithubViewsMetric
+    clones: GithubClonesMetric
+    issues: GithubIssuesMetric
+    referrers: GithubReferrersMetric
+
+    def __init__(self, config: MetricsConfig) -> None:
+        super().__init__(config)
+        self._metrics = []
+        for metric_name, metric_cls in self._metrics_types.items():
+            if not issubclass(metric_cls, GithubMetric):
+                raise TypeError(f"Invalid metric type: {metric_cls}")
+            metric = metric_cls(metric_name, config)
+            self._metrics.append(metric)
+            setattr(self, metric_name, metric)
+
+    @property
+    def repo(self) -> Repository:
+        if isinstance(self.config.repo, str):
+            return gh.Github(login_or_token=os.getenv("GITHUB_ACCESS_TOKEN")).get_repo(
+                self.config.repo
+            )
+        else:
+            return self.config.repo
+
+    @property
+    def name(self) -> str:
+        return f"GitHub ({self.repo.full_name})"

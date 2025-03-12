@@ -1,15 +1,12 @@
 import abc
 from datetime import datetime
-from typing import Generic, TypeVar
 
 import plotly.graph_objects as go
 
 from gh_project_metrics.metrics import MetricsProvider
 
-T = TypeVar("T", bound=MetricsProvider)
 
-
-class Plotter(abc.ABC, Generic[T]):
+class Plotter[T: MetricsProvider](abc.ABC):
     def __init__(self, metrics: T, plot_args: dict | None = None):
         self._metrics = metrics
 

@@ -1,74 +1,115 @@
-import functools
-import inspect
-import sys
-from abc import abstractmethod
-from collections.abc import Callable, Iterable, Iterator
+import pickle
+from abc import ABC, abstractmethod
+from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import Any, NamedTuple, Self, TextIO, TypeAlias
+from typing import Self
 
 import pandas as pd
 
 from gh_project_metrics.db import DatabaseWriter
-
-MetricFn: TypeAlias = Callable[..., pd.DataFrame]
-
-
-class MetricDefinition(NamedTuple):
-    name: str
-    fn: MetricFn
+from gh_project_metrics.util import combine_csv
 
 
-class Metric(NamedTuple):
-    name: str
-    data: pd.DataFrame
+class BaseMetric(ABC):
+    def __init__(self, name: str | None = None) -> None:
+        self.name = name or self.__class__.__name__
+        self._cache: dict[tuple, pd.DataFrame] = {}
 
+    def __call__(self, *args) -> pd.DataFrame:
+        return self.compute(*args)
 
-def metric(fn: MetricFn) -> MetricFn:
-    """Marks a function as a metrics function with caching support."""
-
-    cache_attr = f"_{fn.__name__}_cache"
-
-    def wrapper(self, *args):
-        # Initialize the cache if it doesn't exist
-        if not hasattr(self, cache_attr):
-            setattr(self, cache_attr, {})
-        cache = getattr(self, cache_attr)
-
+    def compute(self, *args) -> pd.DataFrame:
         # Return cached result if available
-        if args in cache:
-            return cache[args]
-
-        # Compute and store the result in the cache
-        result = fn(self, *args)
-        cache[args] = result
+        if args in self._cache:
+            return self._cache[args]
+        result = self._compute(*args)
+        self._cache[args] = result
         return result
 
-    functools.update_wrapper(wrapper, fn)
-    wrapper.__annotations__["is_metric"] = True
-
-    return wrapper
-
-
-def _header(title: str) -> str:
-    return f"------------------ [{title.upper():^20}] ------------------"
-
-
-class MetricsProvider(Iterable[Metric]):
-    @classmethod
     @abstractmethod
-    def from_raw_data(cls, data_dir: Path, *init_args) -> Self:
-        """Instantiate a MetricsProvider instance from raw data."""
+    def _compute(self, *args) -> pd.DataFrame:
         pass
 
-    def __iter__(self) -> Iterator[Metric]:
-        def _is_metric(item: Any) -> bool:
-            return callable(item) and "is_metric" in inspect.get_annotations(item)
+    def dump_raw(self, outdir: Path) -> None:
+        """Dump the metric data."""
+        df = self.compute()
+        # FIXME: kwargs
+        combine_csv(df, outdir / f"{self.name}.csv")
+        df.to_csv(outdir / f"{self.name}.csv", index=True)
 
-        metrics: list[MetricDefinition] = []
-        for name, metrics_fn in inspect.getmembers(self, _is_metric):
-            metrics.append(MetricDefinition(name, metrics_fn))
+    @classmethod
+    @abstractmethod
+    def load_raw(cls, name: str, indir: Path) -> Self:
+        """Load from raw data and rebuild cache."""
+        pass
 
-        return (Metric(m.name, m.fn()) for m in metrics)
+    @classmethod
+    def from_data(cls, name: str, data: pd.DataFrame) -> Self:
+        """Create an instance from raw data."""
+        instance = cls.__new__(cls)
+        instance.name = name
+        instance._cache = {(): data}
+        return instance
+
+
+class MetricsProviderMeta(type):
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+
+        # Skip automatic registration for the MetricsProvider base class
+        if name == "MetricsProvider":
+            return cls
+
+        # Discover all metrics defined as class attributes
+        metrics = {}
+        annotations = namespace.get("__annotations__", {})
+        for attr_name, attr_type in annotations.items():
+            if (
+                isinstance(attr_type, type)
+                and issubclass(attr_type, BaseMetric)
+                and attr_type is not BaseMetric
+            ):
+                metrics.update({attr_name: attr_type})
+
+        # Inject the automatically discovered metrics.
+        cls._metrics_types = metrics
+
+        # Update the type annotations for IDE completion.
+        updated_annotations = getattr(cls, "__annotations__", {}).copy()
+        for metric_cls in metrics.values():
+            updated_annotations[metric_cls.__name__] = metric_cls
+        cls.__annotations__ = updated_annotations
+
+        return cls
+
+
+class MetricsProvider[TMetric: BaseMetric](metaclass=MetricsProviderMeta):
+    _metrics_types: Mapping[str, type[TMetric]]
+
+    def __init__(self, config) -> None:
+        self._metrics: list[TMetric] = []
+        self.config = config
+
+    @classmethod
+    def from_raw_data(cls, data_dir: Path) -> Self:
+        """Instantiate a MetricsProvider instance from raw data."""
+
+        config = pickle.loads((data_dir / "config.pkl").read_bytes())
+
+        # HACK: Bypassing the constructor is ugly but required to prevent re-instantiation of the metrics
+        instance = cls.__new__(cls)
+        cls.config = config
+        cls._metrics = []  # type: ignore[misc]
+
+        for metric_name, metric_cls in cls._metrics_types.items():
+            metric_instance = metric_cls.load_raw(metric_name, data_dir)
+            instance._metrics.append(metric_instance)
+            setattr(instance, metric_name, metric_instance)
+
+        return instance
+
+    def __iter__(self) -> Iterator[TMetric]:
+        return iter(self._metrics)
 
     @property
     def name(self) -> str:
@@ -76,45 +117,14 @@ class MetricsProvider(Iterable[Metric]):
 
     def materialize(self) -> None:
         """Compute all metrics in the provider and store them in the cache."""
-        # Iterate over all metrics to compute them
-        for _ in self:
-            pass
-
-    def dump(self, dest: TextIO = sys.stdout) -> None:
-        """Write all metrics from this provider into a stream (stdout by default)."""
         for m in self:
-            print(_header(m.name), file=dest)
-            print(m.data, file=dest)
+            m.compute()
 
-    @abstractmethod
     def dump_raw_data(self, outdir: Path) -> None:
-        """Dump raw data to a directory."""
-        pass
+        (outdir / "config.pkl").write_bytes(pickle.dumps(self.config))
+        for m in self:
+            m.dump_raw(outdir)
 
     def write(self, db: DatabaseWriter) -> None:
         for m in self:
-            db.write(m.data, m.name)
-
-    def __getstate__(self):
-        # Serialize the object, including cache states
-        state = self.__dict__.copy()
-
-        # Extract all cache attributes
-        caches = {
-            key: value
-            for key, value in state.items()
-            if key.startswith("_") and key.endswith("_cache")
-        }
-        state["caches"] = caches
-
-        # Remove the actual cache attributes from the dictionary
-        for key in caches:
-            del state[key]
-
-        return state
-
-    def __setstate__(self, state):
-        # Restore the object state, including caches
-        self.__dict__.update(state)
-        for key, cache in state.get("caches", {}).items():
-            setattr(self, key, cache)
+            db.write(m.compute(), m.name)
