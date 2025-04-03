@@ -107,7 +107,7 @@ class GithubIssuesMetric(GithubMetric):
                 "status": "closed" if issue.state == "closed" else "open",
                 "comments_count": issue.comments,
                 "assignees": {assignee.login for assignee in issue.assignees},
-                "has_pull_request": issue.pull_request is not None,
+                "has_pull_request": pd.NA,  # TODO: Disabled for now, since it requires a lot of API calls
                 "resolution_time": issue.closed_at - issue.created_at
                 if not pd.isna(issue.closed_at)
                 else pd.NaT,
