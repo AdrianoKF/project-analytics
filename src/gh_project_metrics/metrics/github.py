@@ -160,7 +160,11 @@ class GithubIssuesMetric(GithubMetric):
 
 class GithubReferrersMetric(GithubMetric):
     def _compute(self, *args) -> pd.DataFrame:
-        df = pd.DataFrame([r.raw_data for r in self.repo.get_top_referrers() or []])
+        referrers = self.repo.get_top_referrers()
+        if not referrers:
+            return pd.DataFrame()
+
+        df = pd.DataFrame([r.raw_data for r in referrers])
         return df.set_index("referrer")
 
     @classmethod
