@@ -56,6 +56,9 @@ def combine_csv(
     write_kwargs: dict[str, Any] | None = None,
 ) -> None:
     """Write a DataFrame to a CSV file, combining with existing data, if any."""
+    if df.empty:
+        return
+
     write_df = df.copy()
     if outfile.exists():
         old_df = pd.read_csv(
