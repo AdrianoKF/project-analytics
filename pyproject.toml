@@ -7,14 +7,13 @@ name = "gh-project-metrics"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 keywords = []
 authors = [{ name = "Adrian Rumpold", email = "a.rumpold@gmail.com" }]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
@@ -28,7 +27,7 @@ dependencies = [
   "db-dtypes",                # BigQuery to Pandas
   "pandas-gbq",
   "plotly",
-  "kaleido==0.2.1",           # Plotly image export; FIXME: 0.2.1.post1 is broken
+  "kaleido",                  # Plotly image export
   "supabase",
   "loguru>=0.7.3",
   "dagster>=1.9.5",
@@ -37,8 +36,9 @@ dependencies = [
   "gcsfs>=2024.12.0",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
+  "basedpyright>=1.37.0",
   "build>=0.10.0",
   "ipykernel>=6.29.5",
   "ipython>=8.32.0",
