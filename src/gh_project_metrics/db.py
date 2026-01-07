@@ -29,7 +29,11 @@ class SupabaseWriter(DatabaseWriter):
 
         url = os.getenv("SUPABASE_URL")
         key = os.getenv("SUPABASE_KEY")
-        opts = client_options.ClientOptions(schema=project_name)
+
+        if not url or not key:
+            raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
+
+        opts = client_options.SyncClientOptions(schema=project_name)
         self._client = supabase.create_client(url, key, options=opts)
 
     @property

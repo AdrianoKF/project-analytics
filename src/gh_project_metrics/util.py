@@ -3,7 +3,6 @@ import warnings
 from pathlib import Path
 from typing import Any
 
-import packaging
 import packaging.version
 import pandas as pd
 
